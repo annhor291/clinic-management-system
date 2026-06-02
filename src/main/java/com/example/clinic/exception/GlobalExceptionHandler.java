@@ -3,6 +3,8 @@ package com.example.clinic.exception;
 import com.example.clinic.dto.response.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -76,5 +78,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("Đã xảy ra lỗi hệ thống, vui lòng thử lại sau"));
+    }
+
+    // Bắt lỗi sai email hoặc password → HTTP 401
+    @ExceptionHandler({BadCredentialsException.class, UsernameNotFoundException.class})
+    public ResponseEntity<ApiResponse<Void>> handleAuthException(Exception ex) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error("Email hoặc mật khẩu không đúng"));
     }
 }
