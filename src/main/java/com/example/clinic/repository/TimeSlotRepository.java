@@ -3,7 +3,9 @@ package com.example.clinic.repository;
 
 import com.example.clinic.entity.TimeSlot;
 import com.example.clinic.entity.enums.SlotStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -58,10 +60,8 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
     );
 
     // Tìm slot với pessimistic lock để chống double booking
-    // PESSIMISTIC_WRITE: lock row lại khi đọc → transaction khác phải chờ
-    @Query("""
-            SELECT ts FROM TimeSlot ts
-            WHERE ts.id = :id
-            """)
+    // PESSIMISTIC_WRITE: lock row lại khi đọc → transaction khác phải chờ transaction hiện tại hoàn thành
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT ts FROM TimeSlot ts WHERE ts.id = :id")
     Optional<TimeSlot> findByIdWithLock(@Param("id") Long id);
 }

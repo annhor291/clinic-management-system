@@ -16,9 +16,6 @@ import lombok.NoArgsConstructor;
 @Builder
 public class CancelRequest {
 
-    @NotNull(message = "Người hủy không được để trống")
-    private CancelledBy cancelledBy;    // PATIENT, DOCTOR, ADMIN
-
     @NotBlank(message = "Lý do hủy không được để trống")
     @Size(max = 500, message = "Lý do hủy không được vượt quá 500 ký tự")
     private String reason;
