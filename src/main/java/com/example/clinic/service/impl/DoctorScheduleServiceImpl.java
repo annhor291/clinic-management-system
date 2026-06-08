@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -80,6 +81,13 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
 
         // Tự động sinh TimeSlot từ schedule
         List<TimeSlot> slots = generateTimeSlots(savedSchedule);
+
+        // Không cho tạo schedule nếu không còn slot khả dụng
+        if (slots.isEmpty()) {
+            throw new IllegalStateException(
+                    "Ca làm việc không tạo được slot khả dụng");
+        }
+
         timeSlotRepository.saveAll(slots);
 
         // Load lại schedule với slots để trả về
@@ -185,28 +193,40 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
     // ===== Private helper =====
 
     // Sinh danh sách TimeSlot từ DoctorSchedule
-    // VD: Ca 08:00 - 12:00, mỗi slot 30 phút
-    //     → 08:00-08:30, 08:30-09:00, 09:00-09:30 ... 11:30-12:00
+    // Nếu là lịch hôm nay thì bỏ qua các slot đã qua
     private List<TimeSlot> generateTimeSlots(DoctorSchedule schedule) {
+
         List<TimeSlot> slots = new ArrayList<>();
+
         LocalTime current = schedule.getStartTime();
         LocalTime endTime = schedule.getEndTime();
         int duration = schedule.getSlotDurationMinutes();
 
+        LocalDateTime now = LocalDateTime.now();
+
         while (current.plusMinutes(duration).compareTo(endTime) <= 0) {
+
             LocalTime slotEnd = current.plusMinutes(duration);
 
-            TimeSlot slot = TimeSlot.builder()
-                    .schedule(schedule)
-                    .doctor(schedule.getDoctor())
-                    .slotDate(schedule.getWorkDate())
-                    .startTime(current)
-                    .endTime(slotEnd)
-                    .status(SlotStatus.AVAILABLE)
-                    .build();
+            LocalDateTime slotDateTime =
+                    LocalDateTime.of(schedule.getWorkDate(), current);
 
-            slots.add(slot);
-            current = slotEnd; // Slot tiếp theo bắt đầu từ cuối slot này
+            // Chỉ tạo slot còn trong tương lai
+            if (slotDateTime.isAfter(now)) {
+
+                TimeSlot slot = TimeSlot.builder()
+                        .schedule(schedule)
+                        .doctor(schedule.getDoctor())
+                        .slotDate(schedule.getWorkDate())
+                        .startTime(current)
+                        .endTime(slotEnd)
+                        .status(SlotStatus.AVAILABLE)
+                        .build();
+
+                slots.add(slot);
+            }
+
+            current = slotEnd;
         }
 
         return slots;
