@@ -31,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.UUID;
 
 
 @Service
@@ -43,8 +43,6 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final TimeSlotRepository timeSlotRepository;
     private final AppointmentMapper appointmentMapper;
 
-    // Counter dùng để sinh booking code
-    private final AtomicLong bookingCounter = new AtomicLong(0);
 
     // ===== ĐẶT LỊCH KHÁM =====
     // @Transactional đảm bảo toàn bộ quá trình đặt lịch là 1 transaction
@@ -99,7 +97,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         // 8. Tạo lịch hẹn mới
         Appointment appointment = Appointment.builder()
-                .bookingCode(generateBookingCode())
+                .bookingCode(generatePlaceholder())
                 .patient(patient)
                 .doctor(slot.getDoctor())
                 .timeSlot(slot)
@@ -108,7 +106,18 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .note(request.getNote())
                 .build();
 
-        return appointmentMapper.toResponse(appointmentRepository.save(appointment));
+        // 9. Save lần 1 → DB sinh id AUTO INCREMENT
+        Appointment saved = appointmentRepository.save(appointment);
+
+        // 10. Sinh bookingCode thật từ id
+        // id là AUTO INCREMENT của DB → unique tuyệt đối
+        // Không bị reset sau restart, không duplicate khi multi-instance
+        saved.setBookingCode(generateBookingCode(saved.getId()));
+
+        // 11. Save lần 2 → cập nhật bookingCode thật
+        saved = appointmentRepository.save(saved);
+
+        return appointmentMapper.toResponse(saved);
     }
 
     // ===== LẤY CHI TIẾT LỊCH HẸN =====
@@ -263,21 +272,25 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new IllegalStateException("Không thể đổi sang lịch đã qua");
         }
 
+        // Giải phóng slot cũ → AVAILABLE
         TimeSlot oldSlot = oldAppointment.getTimeSlot();
         oldSlot.setStatus(SlotStatus.AVAILABLE);
         timeSlotRepository.save(oldSlot);
 
+        // Hủy appointment cũ
         oldAppointment.setStatus(AppointmentStatus.CANCELLED);
         oldAppointment.setCancellationReason("Đổi lịch: " + request.getReason());
         oldAppointment.setCancelledAt(LocalDateTime.now());
         oldAppointment.setCancelledBy(getCancelledByFromContext());
         appointmentRepository.save(oldAppointment);
 
+        // Lock slot mới → BOOKED
         newSlot.setStatus(SlotStatus.BOOKED);
         timeSlotRepository.save(newSlot);
 
+        // Tạo appointment mới với placeholder booking code
         Appointment newAppointment = Appointment.builder()
-                .bookingCode(generateBookingCode())
+                .bookingCode(generatePlaceholder())
                 .patient(oldAppointment.getPatient())
                 .doctor(newSlot.getDoctor())
                 .timeSlot(newSlot)
@@ -287,7 +300,16 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .rescheduledFrom(oldAppointment)
                 .build();
 
-        return appointmentMapper.toResponse(appointmentRepository.save(newAppointment));
+        // Save lần 1 → có id từ DB
+        Appointment saved = appointmentRepository.save(newAppointment);
+
+        // Sinh bookingCode thật từ id → unique tuyệt đối
+        saved.setBookingCode(generateBookingCode(saved.getId()));
+
+        // Save lần 2 → cập nhật bookingCode thật
+        saved = appointmentRepository.save(saved);
+
+        return appointmentMapper.toResponse(saved);
     }
 
     // ===== Private helpers =====
@@ -368,15 +390,25 @@ public class AppointmentServiceImpl implements AppointmentService {
         };
     }
 
-    // Sinh mã đặt lịch theo format:
-    // APT-YYYYMMDD-XXXX
-    // TODO:
-    // AtomicLong sẽ reset khi ứng dụng restart.
-    // Trong môi trường production nên thay bằng DB Sequence
-    // hoặc cơ chế sinh mã ở database để đảm bảo duy nhất.
-    private String generateBookingCode() {
-        String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        long count = bookingCounter.incrementAndGet();
-        return String.format("APT-%s-%04d", date, count);
+     // Sinh bookingCode từ id của appointment
+     // id là AUTO INCREMENT của DB → unique tuyệt đối
+     // Không bị reset sau restart
+     // Không duplicate khi multi-instance
+     // Không có race condition
+    private String generateBookingCode(Long appointmentId) {
+        String date = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        return String.format("APT-%s-%04d", date, appointmentId);
     }
+
+     // Sinh placeholder bookingCode để insert lần đầu
+     // Dùng UUID ngắn thay vì "TEMP" cố định
+     // -> Tránh DUPLICATE KEY khi nhiều request đồng thời
+     // -> Sẽ được replace bằng bookingCode thật sau khi có id
+    private String generatePlaceholder() {
+        return "PH-" + UUID.randomUUID().toString()
+                .substring(0, 8).toUpperCase();
+        // VD: PH-A3F2B891 — unique, không bao giờ duplicate
+    }
+
 }
