@@ -1,5 +1,6 @@
 package com.example.clinic.security;
 
+import com.example.clinic.entity.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
@@ -32,8 +33,14 @@ public class JwtUtil {
 
     // Tạo JWT token từ UserDetails
     public String generateToken(UserDetails userDetails) {
+
+        User user = (User) userDetails;
+
         Map<String, Object> claims = new HashMap<>();
-        return buildToken(claims, userDetails.getUsername(), expiration);
+        claims.put("userId", user.getId());
+        claims.put("role", user.getRole().name());
+
+        return buildToken(claims, user.getEmail(), expiration);
     }
 
     // Tạo token với claims và thời gian hết hạn
@@ -50,6 +57,28 @@ public class JwtUtil {
     // Lấy email (subject) từ token
     public String extractEmail(String token) {
         return extractAllClaims(token).getSubject();
+    }
+
+    // Lấy userId từ JWT token
+    // Dùng cho ownership check mà không cần client truyền id
+    public Long extractUserId(String token) {
+        Object value = extractAllClaims(token).get("userId");
+
+        if (value instanceof Integer) {
+            return ((Integer) value).longValue();
+        }
+
+        if (value instanceof Long) {
+            return (Long) value;
+        }
+
+        return Long.valueOf(value.toString());
+    }
+
+    // Lấy role từ JWT token
+    // Dùng cho phân quyền nhanh mà không cần query DB
+    public String extractRole(String token) {
+        return extractAllClaims(token).get("role", String.class);
     }
 
     // Lấy thời gian hết hạn từ token
