@@ -41,6 +41,26 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Không tìm thấy bác sĩ với id: " + request.getDoctorId()));
 
+        // Bác sĩ inactive không thể nhận bệnh nhân
+        if (!doctor.isActive()) {
+            throw new IllegalStateException(
+                    "Không thể tạo lịch làm việc cho bác sĩ đang bị vô hiệu hóa");
+        }
+
+        // Ngày quá khứ không thể có slot khả dụng
+        if (request.getWorkDate().isBefore(LocalDate.now())) {
+            throw new IllegalStateException(
+                    "Không thể tạo lịch làm việc cho ngày đã qua");
+        }
+
+        // Tránh tạo schedule không có slot nào vì toàn bộ giờ đã qua
+        if (request.getWorkDate().isEqual(LocalDate.now())
+                && !request.getEndTime().isAfter(LocalTime.now())) {
+
+            throw new IllegalStateException(
+                    "Không thể tạo lịch làm việc vì ca làm việc đã kết thúc");
+        }
+
         // Kiểm tra bác sĩ đã có ca làm việc trong ngày đó chưa
         if (scheduleRepository.existsByDoctorIdAndWorkDate(
                 request.getDoctorId(), request.getWorkDate())) {
@@ -119,8 +139,6 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         return scheduleMapper.toResponseWithSlots(saved);
     }
 
-
-
     // Xoá ca làm việc
     @Override
     @Transactional
@@ -143,6 +161,12 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
     @Override
     public DoctorScheduleResponse activate(Long id) {
         DoctorSchedule schedule = findByIdOrThrow(id);
+
+        // Lịch quá khứ không có ý nghĩa, slot sẽ không đặt được
+        if (schedule.getWorkDate().isBefore(LocalDate.now())) {
+            throw new IllegalStateException(
+                    "Không thể kích hoạt lịch làm việc của ngày đã qua");
+        }
 
         schedule.setActive(true);
 
