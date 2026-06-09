@@ -12,7 +12,7 @@ public interface PatientService {
     // Lấy chi tiết 1 bệnh nhân theo id
     PatientResponse getById(Long id);
 
-    // Lấy thông tin bệnh nhân theo user_id (dùng khi bệnh nhân xem hồ sơ của chính mình)
+    // Lấy thông tin bệnh nhân theo user_id
     PatientResponse getByUserId(Long userId);
 
     // Tạo mới bệnh nhân

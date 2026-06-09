@@ -12,7 +12,7 @@ public interface DoctorService {
     // Lấy chi tiết 1 bác sĩ theo id
     DoctorResponse getById(Long id);
 
-    // Lấy thông tin bác sĩ theo user_id (dùng khi bác sĩ xem hồ sơ của chính mình)
+    // Lấy thông tin bác sĩ theo user_id
     DoctorResponse getByUserId(Long userId);
 
     // Tạo mới bác sĩ
