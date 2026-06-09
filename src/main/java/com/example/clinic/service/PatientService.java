@@ -23,4 +23,6 @@ public interface PatientService {
 
     // Xoá bệnh nhân
     void delete(Long id);
+
+    PatientResponse getMe();
 }

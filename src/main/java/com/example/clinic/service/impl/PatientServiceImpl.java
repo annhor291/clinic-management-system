@@ -10,6 +10,7 @@ import com.example.clinic.exception.DuplicateResourceException;
 import com.example.clinic.exception.ResourceNotFoundException;
 import com.example.clinic.repository.PatientRepository;
 import com.example.clinic.repository.UserRepository;
+import com.example.clinic.security.SecurityUtil;
 import com.example.clinic.service.PatientService;
 import com.example.clinic.mapper.PatientMapper;
 import lombok.RequiredArgsConstructor;
@@ -61,6 +62,8 @@ public class PatientServiceImpl implements PatientService {
                         "Không tìm thấy hồ sơ bệnh nhân với user id: " + userId));
         return patientMapper.toResponse(patient);
     }
+
+
 
     // Tạo mới bệnh nhân
     // userId: id của User đã đăng ký, sẽ liên kết với Patient này
@@ -118,6 +121,19 @@ public class PatientServiceImpl implements PatientService {
     public void delete(Long id) {
         Patient patient = findByIdOrThrow(id);
         patientRepository.delete(patient);
+    }
+
+    // Lấy hồ sơ bệnh nhân của chính mình
+    // UserId được lấy từ SecurityContext sau khi JWT đã được xác thực
+    @Override
+    @Transactional(readOnly = true)
+    public PatientResponse getMe() {
+        try {
+            return getByUserId(SecurityUtil.getCurrentUserId());
+
+        } catch (ResourceNotFoundException e) {
+            throw new ResourceNotFoundException("Bạn chưa có hồ sơ bệnh nhân");
+        }
     }
 
     // ===== Private helper =====

@@ -5,11 +5,13 @@ import com.example.clinic.dto.request.PatientUpdateRequest;
 import com.example.clinic.dto.response.ApiResponse;
 import com.example.clinic.dto.response.PageResponse;
 import com.example.clinic.dto.response.PatientResponse;
+import com.example.clinic.security.SecurityUtil;
 import com.example.clinic.service.PatientService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -31,10 +33,26 @@ public class PatientController {
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách bệnh nhân thành công", result));
     }
 
+    // GET /api/v1/patients/me
+    // Bệnh nhân xem hồ sơ của chính mình
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<PatientResponse>> getMe() {
+
+        PatientResponse patient = patientService.getMe();
+
+        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin bệnh nhân thành công", patient));
+    }
+
     // GET /api/v1/patients/{id}
     // Lấy chi tiết 1 bệnh nhân theo id
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<PatientResponse>> getById(@PathVariable Long id) {
+        // Defense in depth:
+        // PATIENT chỉ được dùng /patients/me
+        if (SecurityUtil.isPatient()) {
+            throw new AccessDeniedException("Bệnh nhân không được truy cập endpoint này");
+        }
+
         PatientResponse patient = patientService.getById(id);
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin bệnh nhân thành công", patient));
     }
