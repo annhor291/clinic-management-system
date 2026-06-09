@@ -11,9 +11,11 @@ import com.example.clinic.exception.ResourceNotFoundException;
 import com.example.clinic.repository.DoctorRepository;
 import com.example.clinic.repository.DoctorScheduleRepository;
 import com.example.clinic.repository.TimeSlotRepository;
+import com.example.clinic.security.SecurityUtil;
 import com.example.clinic.service.DoctorScheduleService;
 import com.example.clinic.mapper.DoctorScheduleMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +43,14 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         Doctor doctor = doctorRepository.findById(request.getDoctorId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Không tìm thấy bác sĩ với id: " + request.getDoctorId()));
+
+        // Ownership: DOCTOR chỉ tạo schedule cho chính mình
+        if (SecurityUtil.isDoctor()) {
+            if (!doctor.getUser().getId().equals(SecurityUtil.getCurrentUserId())) {
+                throw new AccessDeniedException(
+                        "Bạn chỉ có thể tạo lịch làm việc cho chính mình");
+            }
+        }
 
         // Bác sĩ inactive không thể nhận bệnh nhân
         if (!doctor.isActive()) {
@@ -152,6 +162,15 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
     @Transactional
     public void delete(Long id) {
         DoctorSchedule schedule = findByIdOrThrow(id);
+
+        // Ownership: DOCTOR chỉ xóa schedule của chính mình
+        if (SecurityUtil.isDoctor()) {
+            if (!schedule.getDoctor().getUser().getId()
+                    .equals(SecurityUtil.getCurrentUserId())) {
+                throw new AccessDeniedException(
+                        "Bạn chỉ có thể xóa lịch làm việc của chính mình");
+            }
+        }
 
         // Không cho xoá nếu đã có slot được đặt
         boolean hasBookedSlot = schedule.getTimeSlots().stream()

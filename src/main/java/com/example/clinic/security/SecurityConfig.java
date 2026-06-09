@@ -3,6 +3,7 @@ package com.example.clinic.security;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -44,21 +45,69 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/dashboard/**")
                         .hasRole("ADMIN")
 
-                        // API ADMIN + RECEPTIONIST
-                        .requestMatchers("/api/v1/patients/**")
-                        .hasAnyRole("ADMIN", "RECEPTIONIST", "PATIENT")
-                        .requestMatchers("/api/v1/doctors/**")
-                        .hasAnyRole("ADMIN", "RECEPTIONIST", "DOCTOR", "PATIENT")
-                        .requestMatchers("/api/v1/specialties/**")
+                        // Bệnh nhân xem hồ sơ của chính mình
+                        .requestMatchers(HttpMethod.GET, "/api/v1/patients/me")
+                        .hasRole("PATIENT")
+
+                        // Admin xem hồ sơ bệnh nhân theo userId
+                        .requestMatchers(HttpMethod.GET, "/api/v1/patients/user/**")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST")
+
+                        // Xem chi tiết bệnh nhân
+                        .requestMatchers(HttpMethod.GET, "/api/v1/patients/**")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST", "DOCTOR")
+
+                        // Tạo / cập nhật / xóa bệnh nhân
+                        .requestMatchers(HttpMethod.POST, "/api/v1/patients/**")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST")
+
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/patients/**")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST")
+
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/patients/**")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST")
+
+                        // Bác sĩ xem hồ sơ của chính mình
+                        .requestMatchers(HttpMethod.GET, "/api/v1/doctors/me")
+                        .hasRole("DOCTOR")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/doctors/user/**")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST")
+
+                        // Xem thông tin bác sĩ
+                        .requestMatchers(HttpMethod.GET, "/api/v1/doctors/**")
                         .hasAnyRole("ADMIN", "RECEPTIONIST", "DOCTOR", "PATIENT")
 
-                        // API đặt lịch
+                        // CRUD bác sĩ
+                        .requestMatchers(HttpMethod.POST, "/api/v1/doctors/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/doctors/**")
+                        .hasAnyRole("ADMIN", "DOCTOR")
+
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/doctors/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/specialties/**")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST", "DOCTOR", "PATIENT")
+
+                        .requestMatchers("/api/v1/specialties/**")
+                        .hasRole("ADMIN")
+
                         .requestMatchers("/api/v1/appointments/**")
                         .hasAnyRole("ADMIN", "RECEPTIONIST", "DOCTOR", "PATIENT")
+
+                        // Xem lịch làm việc
+                        .requestMatchers(HttpMethod.GET, "/api/v1/doctor-schedules/**")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST", "DOCTOR", "PATIENT")
+
+                        // Quản lý lịch làm việc
                         .requestMatchers("/api/v1/doctor-schedules/**")
-                        .hasAnyRole("ADMIN", "DOCTOR")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST", "DOCTOR")
+
                         .requestMatchers("/api/v1/time-slots/**")
                         .hasAnyRole("ADMIN", "RECEPTIONIST", "DOCTOR", "PATIENT")
+
 
                         // Tất cả request còn lại cần xác thực
                         .anyRequest().authenticated()
