@@ -33,6 +33,12 @@ public class DoctorController {
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách bác sĩ thành công", result));
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<DoctorResponse>> getMe() {
+        DoctorResponse doctor = doctorService.getMe();
+        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin bác sĩ thành công", doctor));
+    }
+
     // GET /api/v1/doctors/{id}
     // Lấy chi tiết 1 bác sĩ
     @GetMapping("/{id}")

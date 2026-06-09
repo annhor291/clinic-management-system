@@ -12,6 +12,7 @@ import com.example.clinic.exception.ResourceNotFoundException;
 import com.example.clinic.repository.DoctorRepository;
 import com.example.clinic.repository.SpecialtyRepository;
 import com.example.clinic.repository.UserRepository;
+import com.example.clinic.security.SecurityUtil;
 import com.example.clinic.service.DoctorService;
 import com.example.clinic.mapper.DoctorMapper;
 import lombok.RequiredArgsConstructor;
@@ -136,6 +137,19 @@ public class DoctorServiceImpl implements DoctorService {
     public void delete(Long id) {
         Doctor doctor = findByIdOrThrow(id);
         doctorRepository.delete(doctor);
+    }
+
+    // Lấy hồ sơ bác sĩ của người đang đăng nhập
+    // Tái sử dụng logic getByUserId() để tránh duplicate code
+    @Override
+    @Transactional(readOnly = true)
+    public DoctorResponse getMe() {
+        try {
+            return getByUserId(SecurityUtil.getCurrentUserId());
+
+        } catch (ResourceNotFoundException e) {
+            throw new ResourceNotFoundException("Bạn chưa có hồ sơ bác sĩ");
+        }
     }
 
     // ===== Private helper =====

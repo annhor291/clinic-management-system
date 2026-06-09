@@ -26,4 +26,7 @@ public interface DoctorService {
 
     // Xoá bác sĩ
     void delete(Long id);
+
+    // Bác sĩ xem hồ sơ của chính mình
+    DoctorResponse getMe();
 }

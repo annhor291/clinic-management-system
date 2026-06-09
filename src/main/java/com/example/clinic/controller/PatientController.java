@@ -37,9 +37,7 @@ public class PatientController {
     // Bệnh nhân xem hồ sơ của chính mình
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<PatientResponse>> getMe() {
-
         PatientResponse patient = patientService.getMe();
-
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin bệnh nhân thành công", patient));
     }
 
