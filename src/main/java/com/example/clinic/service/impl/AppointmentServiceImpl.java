@@ -6,6 +6,7 @@ import com.example.clinic.dto.request.RescheduleRequest;
 import com.example.clinic.dto.response.AppointmentResponse;
 import com.example.clinic.dto.response.PageResponse;
 import com.example.clinic.entity.Appointment;
+import com.example.clinic.entity.Doctor;
 import com.example.clinic.entity.Patient;
 import com.example.clinic.entity.TimeSlot;
 import com.example.clinic.entity.enums.AppointmentStatus;
@@ -14,6 +15,7 @@ import com.example.clinic.entity.enums.Role;
 import com.example.clinic.entity.enums.SlotStatus;
 import com.example.clinic.exception.ResourceNotFoundException;
 import com.example.clinic.repository.AppointmentRepository;
+import com.example.clinic.repository.DoctorRepository;
 import com.example.clinic.repository.PatientRepository;
 import com.example.clinic.repository.TimeSlotRepository;
 import com.example.clinic.security.SecurityUtil;
@@ -42,6 +44,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final PatientRepository patientRepository;
     private final TimeSlotRepository timeSlotRepository;
     private final AppointmentMapper appointmentMapper;
+    private final DoctorRepository doctorRepository;
 
 
     // ===== ĐẶT LỊCH KHÁM =====
@@ -144,6 +147,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<AppointmentResponse> getByPatient(Long patientId, int page, int size) {
+        // Patient chỉ được xem lịch hẹn của chin mình
         if (SecurityUtil.isPatient()) {
             Patient patient = patientRepository.findById(patientId)
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy bệnh nhân"));
@@ -162,6 +166,18 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<AppointmentResponse> getByDoctor(Long doctorId, int page, int size) {
+        // DOCTOR chỉ được xem lịch hẹn của chính mình
+        if (SecurityUtil.isDoctor()) {
+            Doctor doctor = doctorRepository.findById(doctorId)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Không tìm thấy bác sĩ với id: " + doctorId));
+            if (!doctor.getUser().getId()
+                    .equals(SecurityUtil.getCurrentUserId())) {
+
+                throw new AccessDeniedException(
+                        "Bạn chỉ có thể xem lịch hẹn của chính mình");
+            }
+        }
         Pageable pageable = PageRequest.of(page, size);
         Page<AppointmentResponse> result = appointmentRepository
                 .findByDoctorIdOrderByAppointmentTimeDesc(doctorId, pageable)
