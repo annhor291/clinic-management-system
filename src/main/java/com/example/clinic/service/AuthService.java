@@ -11,4 +11,7 @@ public interface AuthService {
 
     // Đăng nhập và trả về JWT token
     AuthResponse login(LoginRequest request);
+
+    // Đăng nhập bằng google
+    AuthResponse loginWithGoogle(String idToken);
 }

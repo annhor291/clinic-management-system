@@ -1,5 +1,6 @@
 package com.example.clinic.controller;
 
+import com.example.clinic.dto.request.GoogleLoginRequest;
 import com.example.clinic.dto.request.LoginRequest;
 import com.example.clinic.dto.request.RegisterRequest;
 import com.example.clinic.dto.response.ApiResponse;
@@ -42,5 +43,17 @@ public class AuthController {
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(
                 ApiResponse.success("Đăng nhập thành công", response));
+    }
+
+    // POST /api/v1/auth/google
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> loginWithGoogle(
+            @RequestBody GoogleLoginRequest request) {
+
+        return ResponseEntity.ok(
+                authService.loginWithGoogle(
+                        request.getIdToken()
+                )
+        );
     }
 }

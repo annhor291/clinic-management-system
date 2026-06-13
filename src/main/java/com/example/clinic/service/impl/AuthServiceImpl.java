@@ -11,6 +11,8 @@ import com.example.clinic.repository.PatientRepository;
 import com.example.clinic.repository.UserRepository;
 import com.example.clinic.security.JwtUtil;
 import com.example.clinic.service.AuthService;
+import com.example.clinic.service.GoogleAuthService;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,6 +20,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +33,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtils;
     private final AuthenticationManager authenticationManager;
+    private final GoogleAuthService googleAuthService;
 
     // Đăng ký tài khoản mới
     @Override
@@ -95,6 +100,48 @@ public class AuthServiceImpl implements AuthService {
         String token = jwtUtils.generateToken(user);
 
         // Lấy profileId
+        Long profileId = getProfileId(user);
+
+        return AuthResponse.builder()
+                .token(token)
+                .userId(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .profileId(profileId)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse loginWithGoogle(String idToken) {
+        GoogleIdToken.Payload payload = googleAuthService.verifyToken(idToken);
+
+        String email = payload.getEmail();
+
+        User user = userRepository.findByEmail(email)
+                .orElseGet(() -> {
+
+                    User newUser = User.builder()
+                            .username(email)
+                            .email(email)
+                            .password(
+                                    passwordEncoder.encode(
+                                            UUID.randomUUID().toString()
+                                    )
+                            )
+                            .role(Role.PATIENT)
+                            .enabled(true)
+                            .build();
+                    return userRepository.save(newUser);
+                });
+
+        if (user.getRole() != Role.PATIENT) {
+            throw new IllegalArgumentException("Google login is only available for patients");
+        }
+
+        String token = jwtUtils.generateToken(user);
+
         Long profileId = getProfileId(user);
 
         return AuthResponse.builder()
