@@ -1,5 +1,6 @@
 package com.example.clinic.service.impl;
 
+import com.example.clinic.exception.InvalidGoogleTokenException;
 import com.example.clinic.service.GoogleAuthService;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
@@ -13,30 +14,36 @@ import java.util.Collections;
 @Service
 public class GoogleAuthServiceImpl implements GoogleAuthService {
 
-    @Value("${google.client-id}")
-    private String googleClientId;
+    private final GoogleIdTokenVerifier verifier;
+
+    public GoogleAuthServiceImpl(@Value("${google.client-id}") String googleClientId) {
+        try {
+            this.verifier = new GoogleIdTokenVerifier.Builder(
+                    GoogleNetHttpTransport.newTrustedTransport(),
+                    GsonFactory.getDefaultInstance()
+            )
+                    .setAudience(Collections.singletonList(googleClientId))
+                    .build();
+        } catch (Exception e) {
+            throw new RuntimeException("Không thể khởi tạo Google token verifier", e);
+        }
+    }
 
     @Override
     public GoogleIdToken.Payload verifyToken(String idToken) {
         try {
-            GoogleIdTokenVerifier verifier =
-                    new GoogleIdTokenVerifier.Builder(
-                            GoogleNetHttpTransport.newTrustedTransport(),
-                            GsonFactory.getDefaultInstance()
-                    )
-                            .setAudience(Collections.singletonList(googleClientId))
-                            .build();
-
             GoogleIdToken googleIdToken = verifier.verify(idToken);
 
             if (googleIdToken == null) {
-                throw new RuntimeException("Google token không hợp lệ");
+                throw new InvalidGoogleTokenException("Google token không hợp lệ");
             }
 
             return googleIdToken.getPayload();
 
+        } catch (InvalidGoogleTokenException e) {
+            throw e;
         } catch (Exception e) {
-            throw new RuntimeException("Xác thực Google token thất bại", e);
+            throw new InvalidGoogleTokenException("Không thể xác thực Google token");
         }
     }
 }

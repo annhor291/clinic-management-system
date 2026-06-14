@@ -135,8 +135,15 @@ public class AuthServiceImpl implements AuthService {
                     return userRepository.save(newUser);
                 });
 
+        // Kiểm tra provider trước khi cho login Google
+        if (user.getProvider() != AuthProvider.GOOGLE) {
+            throw new IllegalStateException(
+                    "Email này đã được đăng ký bằng tài khoản thường. Vui lòng đăng nhập bằng mật khẩu.");
+        }
+
+        // Kiểm tra role
         if (user.getRole() != Role.PATIENT) {
-            throw new IllegalArgumentException("Chỉ Bệnh nhân đợc phép đăng nhập với Google");
+            throw new IllegalStateException("Chỉ Bệnh nhân đợc phép đăng nhập với Google");
         }
 
         String token = jwtUtils.generateToken(user);

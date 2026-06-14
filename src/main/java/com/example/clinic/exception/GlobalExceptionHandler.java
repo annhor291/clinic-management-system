@@ -72,6 +72,15 @@ public class GlobalExceptionHandler {
                         .build());
     }
 
+    // Bắt lỗi Google token không hợp lệ → HTTP 401
+    @ExceptionHandler(InvalidGoogleTokenException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidGoogleTokenException(
+            InvalidGoogleTokenException ex) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
     // Bắt tất cả exception không mong muốn còn lại → HTTP 500
     // Tránh để lộ stack trace ra ngoài client
     @ExceptionHandler(Exception.class)
