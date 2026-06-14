@@ -4,6 +4,7 @@ import com.example.clinic.dto.request.LoginRequest;
 import com.example.clinic.dto.request.RegisterRequest;
 import com.example.clinic.dto.response.AuthResponse;
 import com.example.clinic.entity.User;
+import com.example.clinic.entity.enums.AuthProvider;
 import com.example.clinic.entity.enums.Role;
 import com.example.clinic.exception.DuplicateResourceException;
 import com.example.clinic.repository.DoctorRepository;
@@ -57,6 +58,7 @@ public class AuthServiceImpl implements AuthService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
+                .provider(AuthProvider.LOCAL)
                 .enabled(true)
                 .build();
 
@@ -125,19 +127,16 @@ public class AuthServiceImpl implements AuthService {
                     User newUser = User.builder()
                             .username(email)
                             .email(email)
-                            .password(
-                                    passwordEncoder.encode(
-                                            UUID.randomUUID().toString()
-                                    )
-                            )
+                            .password(passwordEncoder.encode(UUID.randomUUID().toString()))
                             .role(Role.PATIENT)
+                            .provider(AuthProvider.GOOGLE)
                             .enabled(true)
                             .build();
                     return userRepository.save(newUser);
                 });
 
         if (user.getRole() != Role.PATIENT) {
-            throw new IllegalArgumentException("Google login is only available for patients");
+            throw new IllegalArgumentException("Chỉ Bệnh nhân đợc phép đăng nhập với Google");
         }
 
         String token = jwtUtils.generateToken(user);

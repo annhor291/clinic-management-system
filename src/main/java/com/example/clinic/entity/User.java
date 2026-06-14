@@ -1,5 +1,6 @@
 package com.example.clinic.entity;
 
+import com.example.clinic.entity.enums.AuthProvider;
 import com.example.clinic.entity.enums.Role;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -42,6 +43,10 @@ public class User implements UserDetails {
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)
     private Role role;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AuthProvider provider;
 
     @Column(name = "enabled", nullable = false)
     @Builder.Default

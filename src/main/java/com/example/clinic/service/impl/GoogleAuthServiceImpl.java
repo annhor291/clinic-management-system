@@ -16,7 +16,6 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
     @Value("${google.client-id}")
     private String googleClientId;
 
-
     @Override
     public GoogleIdToken.Payload verifyToken(String idToken) {
         try {
@@ -31,14 +30,13 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
             GoogleIdToken googleIdToken = verifier.verify(idToken);
 
             if (googleIdToken == null) {
-                throw new RuntimeException("Invalid Google token");
+                throw new RuntimeException("Google token không hợp lệ");
             }
 
             return googleIdToken.getPayload();
 
         } catch (Exception e) {
-            throw new RuntimeException(
-                    "Failed to verify Google token", e);
+            throw new RuntimeException("Xác thực Google token thất bại", e);
         }
     }
 }
