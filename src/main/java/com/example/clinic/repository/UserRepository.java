@@ -20,4 +20,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // Kiểm tra username đã tồn tại chưa (dùng khi đăng ký)
     boolean existsByUsername(String username);
+
+    // Tìm user theo reset token
+    Optional<User> findByResetToken(String resetToken);
 }

@@ -48,6 +48,13 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private AuthProvider provider;
 
+    // Reset password token
+    @Column(name = "reset_token")
+    private String resetToken;
+
+    @Column(name = "reset_token_expiry")
+    private LocalDateTime resetTokenExpiry;
+
     @Column(name = "enabled", nullable = false)
     @Builder.Default
     private boolean enabled = true;

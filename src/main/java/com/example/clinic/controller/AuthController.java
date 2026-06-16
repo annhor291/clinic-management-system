@@ -1,20 +1,15 @@
 package com.example.clinic.controller;
 
-import com.example.clinic.dto.request.GoogleLoginRequest;
-import com.example.clinic.dto.request.LoginRequest;
-import com.example.clinic.dto.request.RefreshTokenRequest;
-import com.example.clinic.dto.request.RegisterRequest;
+import com.example.clinic.dto.request.*;
 import com.example.clinic.dto.response.ApiResponse;
 import com.example.clinic.dto.response.AuthResponse;
 import com.example.clinic.service.AuthService;
+import com.example.clinic.service.EmailService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -22,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final EmailService emailService;
 
     // POST /api/v1/auth/register
     // Đăng ký tài khoản mới — không cần token
@@ -76,4 +72,29 @@ public class AuthController {
                 ApiResponse.success("Đăng xuất thành công", null)
         );
     }
+
+    // POST /api/v1/auth/forgot-password
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(
+            @RequestBody ForgotPasswordRequest request) {
+
+        authService.forgotPassword(request.getEmail());
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Email đặt lại mật khẩu đã được gửi", null)
+        );
+    }
+
+    // POST /api/v1/auth/reset-password
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @RequestBody ResetPasswordRequest request) {
+
+        authService.resetPassword(request.getResetToken(), request.getNewPassword());
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Đặt lại mật khẩu thành công", null)
+        );
+    }
+
 }

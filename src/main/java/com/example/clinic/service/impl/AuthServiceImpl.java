@@ -8,11 +8,13 @@ import com.example.clinic.entity.User;
 import com.example.clinic.entity.enums.AuthProvider;
 import com.example.clinic.entity.enums.Role;
 import com.example.clinic.exception.DuplicateResourceException;
+import com.example.clinic.exception.ResourceNotFoundException;
 import com.example.clinic.repository.DoctorRepository;
 import com.example.clinic.repository.PatientRepository;
 import com.example.clinic.repository.UserRepository;
 import com.example.clinic.security.JwtUtil;
 import com.example.clinic.service.AuthService;
+import com.example.clinic.service.EmailService;
 import com.example.clinic.service.GoogleAuthService;
 import com.example.clinic.service.RefreshTokenService;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
@@ -24,6 +26,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
@@ -38,6 +41,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final GoogleAuthService googleAuthService;
     private final RefreshTokenService refreshTokenService;
+    private final EmailService emailService;
 
     // Đăng ký tài khoản mới
     @Override
@@ -199,6 +203,51 @@ public class AuthServiceImpl implements AuthService {
     public void logout(String refreshToken) {
         RefreshToken existingToken = refreshTokenService.validateRefreshToken(refreshToken);
         refreshTokenService.revokeAllUserTokens(existingToken.getUser());
+    }
+
+    @Override
+    @Transactional
+    public void forgotPassword(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Email không tồn tại trong hệ thống"));
+
+        // Không cho phép Google account đặt lại mật khẩu
+        if (user.getProvider() == AuthProvider.GOOGLE) {
+            throw new IllegalStateException("Tài khoản Google không thể đặt lại mật khẩu. Vui lòng đăng nhập bằng Google.");
+        }
+
+        // Tạo reset token
+        String resetToken = UUID.randomUUID().toString();
+        user.setResetToken(resetToken);
+        user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(15));
+        userRepository.save(user);
+
+        // Gửi email
+        emailService.sendForgotPasswordEmail(email, resetToken);
+    }
+
+    @Override
+    public void resetPassword(String resetToken, String newPassword) {
+        User user = userRepository.findByResetToken(resetToken)
+                .orElseThrow(() -> new ResourceNotFoundException("Reset token không hợp lệ"));
+
+        // Kiểm tra token còn hạn không
+        if (user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new IllegalStateException("Reset token đã hết hạn. Vui lòng yêu cầu lại.");
+        }
+
+        // Cập nhật password mới
+        user.setPassword(passwordEncoder.encode(newPassword));
+
+        // Xóa reset token sau khi dùng
+        user.setResetToken(null);
+        user.setResetTokenExpiry(null);
+
+        // Revoke tất cả refresh token → buộc đăng nhập lại
+        refreshTokenService.revokeAllUserTokens(user);
+
+        userRepository.save(user);
+
     }
 
 

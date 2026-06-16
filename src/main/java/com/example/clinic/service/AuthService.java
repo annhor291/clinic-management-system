@@ -20,4 +20,10 @@ public interface AuthService {
 
     // Đăng xuất
     void logout(String refreshToken);
+
+    // Quên mật khẩu
+    void forgotPassword(String email);
+
+    // Đạt lại mật khẩu mới
+    void resetPassword(String resetToken, String newPassword);
 }
