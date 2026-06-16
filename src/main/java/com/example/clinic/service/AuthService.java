@@ -14,4 +14,10 @@ public interface AuthService {
 
     // Đăng nhập bằng google
     AuthResponse loginWithGoogle(String idToken);
+
+    // Đăng nhâ trả về refresh token kèm theo
+    AuthResponse refreshToken(String refreshToken);
+
+    // Đăng xuất
+    void logout(String refreshToken);
 }

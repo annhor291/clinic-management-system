@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 // Utility class xử lý JWT token
 // Tạo token, validate token, parse thông tin từ token
@@ -39,6 +40,7 @@ public class JwtUtil {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", user.getId());
         claims.put("role", user.getRole().name());
+        claims.put("jti", UUID.randomUUID().toString());
 
         return buildToken(claims, user.getEmail(), expiration);
     }

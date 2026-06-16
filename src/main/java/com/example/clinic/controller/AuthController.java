@@ -2,6 +2,7 @@ package com.example.clinic.controller;
 
 import com.example.clinic.dto.request.GoogleLoginRequest;
 import com.example.clinic.dto.request.LoginRequest;
+import com.example.clinic.dto.request.RefreshTokenRequest;
 import com.example.clinic.dto.request.RegisterRequest;
 import com.example.clinic.dto.response.ApiResponse;
 import com.example.clinic.dto.response.AuthResponse;
@@ -52,5 +53,27 @@ public class AuthController {
 
         return ResponseEntity.ok(
                 authService.loginWithGoogle(request.getIdToken()));
+    }
+
+    // POST /api/v1/auth/refresh
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refreshToken(
+            @RequestBody RefreshTokenRequest request) {
+
+        return ResponseEntity.ok(
+                authService.refreshToken(request.getRefreshToken())
+        );
+    }
+
+    // POST /api/v1/auth/logout
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @RequestBody RefreshTokenRequest request) {
+
+        authService.logout(request.getRefreshToken());
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Đăng xuất thành công", null)
+        );
     }
 }

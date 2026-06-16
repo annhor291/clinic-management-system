@@ -15,6 +15,7 @@ public class AuthResponse {
 
     // JWT token để client dùng cho các request tiếp theo
     private String token;
+    private String refreshToken;
 
     // Thông tin user
     private Long userId;

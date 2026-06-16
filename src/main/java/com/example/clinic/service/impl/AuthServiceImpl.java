@@ -3,6 +3,7 @@ package com.example.clinic.service.impl;
 import com.example.clinic.dto.request.LoginRequest;
 import com.example.clinic.dto.request.RegisterRequest;
 import com.example.clinic.dto.response.AuthResponse;
+import com.example.clinic.entity.RefreshToken;
 import com.example.clinic.entity.User;
 import com.example.clinic.entity.enums.AuthProvider;
 import com.example.clinic.entity.enums.Role;
@@ -13,6 +14,7 @@ import com.example.clinic.repository.UserRepository;
 import com.example.clinic.security.JwtUtil;
 import com.example.clinic.service.AuthService;
 import com.example.clinic.service.GoogleAuthService;
+import com.example.clinic.service.RefreshTokenService;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -35,6 +37,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtUtil jwtUtils;
     private final AuthenticationManager authenticationManager;
     private final GoogleAuthService googleAuthService;
+    private final RefreshTokenService refreshTokenService;
 
     // Đăng ký tài khoản mới
     @Override
@@ -82,7 +85,7 @@ public class AuthServiceImpl implements AuthService {
 
     // Đăng nhập và trả về JWT token
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponse login(LoginRequest request) {
         // AuthenticationManager tự động:
         // 1. Load user theo email (gọi UserDetailsServiceImpl)
@@ -100,12 +103,14 @@ public class AuthServiceImpl implements AuthService {
 
         // Tạo JWT token
         String token = jwtUtils.generateToken(user);
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         // Lấy profileId
         Long profileId = getProfileId(user);
 
         return AuthResponse.builder()
                 .token(token)
+                .refreshToken(refreshToken.getToken())
                 .userId(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
@@ -147,11 +152,13 @@ public class AuthServiceImpl implements AuthService {
         }
 
         String token = jwtUtils.generateToken(user);
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         Long profileId = getProfileId(user);
 
         return AuthResponse.builder()
                 .token(token)
+                .refreshToken(refreshToken.getToken())
                 .userId(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
@@ -159,6 +166,41 @@ public class AuthServiceImpl implements AuthService {
                 .profileId(profileId)
                 .build();
     }
+
+    @Override
+    @Transactional
+    public AuthResponse refreshToken(String refreshToken) {
+        RefreshToken existingToken = refreshTokenService.validateRefreshToken(refreshToken);
+
+        User user = existingToken.getUser();
+
+        // Revoke token cũ
+        refreshTokenService.revokeAllUserTokens(user);
+
+        // Tạo access token và refresh token mới
+        String newAccessToken = jwtUtils.generateToken(user);
+        RefreshToken newRefreshToken = refreshTokenService.createRefreshToken(user);
+
+        Long profileId = getProfileId(user);
+
+        return AuthResponse.builder()
+                .token(newAccessToken)
+                .refreshToken(newRefreshToken.getToken())
+                .userId(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .profileId(profileId)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public void logout(String refreshToken) {
+        RefreshToken existingToken = refreshTokenService.validateRefreshToken(refreshToken);
+        refreshTokenService.revokeAllUserTokens(existingToken.getUser());
+    }
+
 
     // ===== Private helper =====
 
