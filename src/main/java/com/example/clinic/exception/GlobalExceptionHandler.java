@@ -90,6 +90,33 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage()));
     }
 
+    // Bắt lỗi mật khẩu không đúng khi đổi mật khẩu
+    @ExceptionHandler(WrongPasswordException.class)
+    public ResponseEntity<ApiResponse<Void>> handleWrongPasswordException(
+            WrongPasswordException ex) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    // Bắt lỗi mật khẩu xác nhận không khớp → HTTP 400
+    @ExceptionHandler(PasswordMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> handlePasswordMismatchException(
+            PasswordMismatchException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    // Bắt lỗi mật khẩu mới giống mật khẩu cũ → HTTP 400
+    @ExceptionHandler(SamePasswordException.class)
+    public ResponseEntity<ApiResponse<Void>> handleSamePasswordException(
+            SamePasswordException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
     // Bắt tất cả exception không mong muốn còn lại → HTTP 500
     // Tránh để lộ stack trace ra ngoài client
     @ExceptionHandler(Exception.class)

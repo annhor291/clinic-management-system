@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -94,6 +95,26 @@ public class AuthController {
 
         return ResponseEntity.ok(
                 ApiResponse.success("Đặt lại mật khẩu thành công", null)
+        );
+    }
+
+    // POST /api/v1/auth/change-password
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @RequestBody ChangePasswordRequest request,
+            Authentication authentication) {
+
+        String email = authentication.getName();
+
+        authService.changePassword(
+                email,
+                request.getOldPassword(),
+                request.getNewPassword(),
+                request.getConfirmPassword()
+        );
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Đổi mật khẩu thành công", null)
         );
     }
 

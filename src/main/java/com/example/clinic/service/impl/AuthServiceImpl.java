@@ -7,8 +7,7 @@ import com.example.clinic.entity.RefreshToken;
 import com.example.clinic.entity.User;
 import com.example.clinic.entity.enums.AuthProvider;
 import com.example.clinic.entity.enums.Role;
-import com.example.clinic.exception.DuplicateResourceException;
-import com.example.clinic.exception.ResourceNotFoundException;
+import com.example.clinic.exception.*;
 import com.example.clinic.repository.DoctorRepository;
 import com.example.clinic.repository.PatientRepository;
 import com.example.clinic.repository.UserRepository;
@@ -248,6 +247,34 @@ public class AuthServiceImpl implements AuthService {
 
         userRepository.save(user);
 
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(String email, String oldPassword, String newPassword, String confirmPassword) {
+        if (!newPassword.equals(confirmPassword)) {
+            throw new PasswordMismatchException("Mật khẩu xác nhận không khớp");
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy user"));
+
+        if (user.getProvider() == AuthProvider.GOOGLE) {
+            throw new IllegalStateException("Tài khoản Google không thể đổi mật khẩu");
+        }
+
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new WrongPasswordException("Mật khẩu cũ không đúng");
+        }
+
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            throw new SamePasswordException("Mật khẩu mới không được giống mật khẩu cũ");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        refreshTokenService.revokeAllUserTokens(user);
     }
 
 

@@ -54,7 +54,17 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         // API công khai — không cần token
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers(
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/register",
+                                "/api/v1/auth/google",
+                                "/api/v1/auth/refresh",
+                                "/api/v1/auth/forgot-password",
+                                "/api/v1/auth/reset-password"
+                        ).permitAll()
+
+                        .requestMatchers("/api/v1/auth/change-password").authenticated()
+                        .requestMatchers("/api/v1/auth/logout").authenticated()
 
                         // API chỉ ADMIN được dùng
                         .requestMatchers("/api/v1/dashboard/**")

@@ -24,6 +24,9 @@ public interface AuthService {
     // Quên mật khẩu
     void forgotPassword(String email);
 
-    // Đạt lại mật khẩu mới
+    // Đặt lại mật khẩu mới
     void resetPassword(String resetToken, String newPassword);
+
+    // Đổi mật khẩu
+    void changePassword(String email, String oldPassword, String newPassword, String confirmPassword);
 }
