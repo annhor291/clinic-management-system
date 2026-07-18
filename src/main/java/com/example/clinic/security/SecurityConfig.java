@@ -72,6 +72,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/dashboard/**")
                         .hasRole("ADMIN")
 
+                        // API quản lý user chỉ dành cho ADMIN
+                        .requestMatchers("/api/v1/users/**")
+                        .hasRole("ADMIN")
+
                         // Bệnh nhân xem hồ sơ của chính mình
                         .requestMatchers(HttpMethod.GET, "/api/v1/patients/me")
                         .hasRole("PATIENT")

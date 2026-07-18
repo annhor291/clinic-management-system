@@ -15,6 +15,8 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
+import static org.aspectj.weaver.tools.cache.SimpleCacheFactory.enabled;
+
 
 @Entity
 @Table(name = "users",
@@ -65,6 +67,15 @@ public class User implements UserDetails {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    // Tài khoản có bị khoá vì lý do bảo mật không (khác với "active" — do admin chủ động bật/tắt)
+    @Column(name = "locked", nullable = false)
+    @Builder.Default
+    private boolean locked = false;
+
+    // Thời điểm xoá mềm — null nghĩa là chưa xoá
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     // ===== Relationships =====
 
     // 1 user có tối đa 1 hồ sơ bệnh nhân (nếu role = PATIENT)
@@ -112,17 +123,17 @@ public class User implements UserDetails {
     @Override
     public boolean isAccountNonExpired() { return true; }
 
-    // Tài khoản không bị khoá theo cơ chế Spring (dùng enabled thay thế)
-    @Override
-    public boolean isAccountNonLocked() { return true; }
-
     // Mật khẩu không bao giờ hết hạn
     @Override
     public boolean isCredentialsNonExpired() { return true; }
 
-    // Trả về trạng thái enabled: false → Spring Security từ chối đăng nhập
+    // Tài khoản bị khoá bảo mật → Spring Security từ chối đăng nhập
     @Override
-    public boolean isEnabled() { return enabled; }
+    public boolean isAccountNonLocked() { return !locked; }
+
+    // enabled=false (admin tắt) hoặc đã bị xoá mềm → không cho đăng nhập
+    @Override
+    public boolean isEnabled() { return enabled && deletedAt == null; }
 
 
 }
