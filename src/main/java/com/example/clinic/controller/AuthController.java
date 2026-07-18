@@ -45,21 +45,22 @@ public class AuthController {
 
     // POST /api/v1/auth/google
     @PostMapping("/google")
-    public ResponseEntity<AuthResponse> loginWithGoogle(
+    public ResponseEntity<ApiResponse<AuthResponse>> loginWithGoogle(
             @RequestBody GoogleLoginRequest request) {
 
+        AuthResponse response = authService.loginWithGoogle(request.getIdToken());
         return ResponseEntity.ok(
-                authService.loginWithGoogle(request.getIdToken()));
+                ApiResponse.success("Đăng nhập Google thành công", response));
     }
 
     // POST /api/v1/auth/refresh
     @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refreshToken(
+    public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(
             @RequestBody RefreshTokenRequest request) {
 
+        AuthResponse response = authService.refreshToken(request.getRefreshToken());
         return ResponseEntity.ok(
-                authService.refreshToken(request.getRefreshToken())
-        );
+                ApiResponse.success("Làm mới token thành công", response));
     }
 
     // POST /api/v1/auth/logout
