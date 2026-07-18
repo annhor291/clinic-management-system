@@ -117,19 +117,7 @@ public class DoctorServiceImpl implements DoctorService {
         return doctorMapper.toResponse(saved);
     }
 
-    // Kích hoạt / vô hiệu hoá bác sĩ
-    // Dùng thay cho xoá để giữ lại lịch sử dữ liệu
-    @Override
-    @Transactional
-    public DoctorResponse toggleActive(Long id) {
-        Doctor doctor = findByIdOrThrow(id);
 
-        // Đảo ngược trạng thái: true → false, false → true
-        doctor.setActive(!doctor.isActive());
-
-        Doctor saved = doctorRepository.save(doctor);
-        return doctorMapper.toResponse(saved);
-    }
 
     // Xoá bác sĩ
     @Override
@@ -137,6 +125,38 @@ public class DoctorServiceImpl implements DoctorService {
     public void delete(Long id) {
         Doctor doctor = findByIdOrThrow(id);
         doctorRepository.delete(doctor);
+    }
+
+    // Kích hoạt bác sĩ
+    // Dùng thay cho xoá để giữ lại lịch sử dữ liệu
+    @Override
+    @Transactional
+    public DoctorResponse activate(Long id) {
+        Doctor doctor = findByIdOrThrow(id);
+
+        if (doctor.isActive()) {
+            throw new IllegalStateException("Bác sĩ này đang ở trạng thái hoạt động");
+        }
+
+        doctor.setActive(true);
+        Doctor saved = doctorRepository.save(doctor);
+        return doctorMapper.toResponse(saved);
+    }
+
+    // Vô hiệu hoá bác sĩ
+    // Dùng thay cho xoá để giữ lại lịch sử dữ liệu
+    @Override
+    @Transactional
+    public DoctorResponse deactivate(Long id) {
+        Doctor doctor = findByIdOrThrow(id);
+
+        if (!doctor.isActive()) {
+            throw new IllegalStateException("Bác sĩ này đang ở trạng thái vô hiệu hoá");
+        }
+
+        doctor.setActive(false);
+        Doctor saved = doctorRepository.save(doctor);
+        return doctorMapper.toResponse(saved);
     }
 
     // Lấy hồ sơ bác sĩ của người đang đăng nhập

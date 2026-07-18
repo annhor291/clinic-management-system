@@ -21,11 +21,14 @@ public interface DoctorService {
     // Cập nhật thông tin bác sĩ
     DoctorResponse update(Long id, DoctorUpdateRequest request);
 
-    // Kích hoạt / vô hiệu hoá bác sĩ (thay vì xoá hẳn)
-    DoctorResponse toggleActive(Long id);
-
     // Xoá bác sĩ
     void delete(Long id);
+
+    // Kích hoạt bác sĩ
+    DoctorResponse activate(Long id);
+
+    // Vô hiệu hoá bác sĩ
+    DoctorResponse deactivate(Long id);
 
     // Bác sĩ xem hồ sơ của chính mình
     DoctorResponse getMe();

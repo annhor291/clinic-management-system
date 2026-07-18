@@ -80,12 +80,20 @@ public class DoctorController {
         return ResponseEntity.ok(ApiResponse.success("Cập nhật thông tin bác sĩ thành công", doctor));
     }
 
-    // PUT /api/v1/doctors/{id}/toggle-active
-    // Kích hoạt / vô hiệu hoá bác sĩ
-    @PutMapping("/{id}/toggle-active")
-    public ResponseEntity<ApiResponse<DoctorResponse>> toggleActive(@PathVariable Long id) {
-        DoctorResponse doctor = doctorService.toggleActive(id);
-        return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái bác sĩ thành công", doctor));
+    // PUT /api/v1/doctors/{id}/active
+    // Kích hoạt bác sĩ
+    @PutMapping("/{id}/active")
+    public ResponseEntity<ApiResponse<DoctorResponse>> activate(@PathVariable Long id) {
+        DoctorResponse doctor = doctorService.activate(id);
+        return ResponseEntity.ok(ApiResponse.success("Kích hoạt bác sĩ thành công", doctor));
+    }
+
+    // PUT /api/v1/doctors/{id}/deactive
+    // Vô hiệu hoá bác sĩ
+    @PutMapping("/{id}/deactive")
+    public ResponseEntity<ApiResponse<DoctorResponse>> deactivate(@PathVariable Long id) {
+        DoctorResponse doctor = doctorService.deactivate(id);
+        return ResponseEntity.ok(ApiResponse.success("Vô hiệu hoá bác sĩ thành công", doctor));
     }
 
     // DELETE /api/v1/doctors/{id}
