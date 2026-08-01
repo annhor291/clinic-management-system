@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 @Entity
 @Table(
@@ -73,9 +74,11 @@ public class TimeSlot {
     private LocalDateTime updatedAt;
 
     // ===== Relationships =====
-    // 1 slot chỉ có tối đa 1 appointment
-    @OneToOne(mappedBy = "timeSlot", fetch = FetchType.LAZY)
-    private Appointment appointment;
+    // ===== Relationships =====
+    // 1 slot có thể có nhiều appointment theo lịch sử (VD: 1 cái CANCELLED, 1 cái đặt lại sau đó)
+    // nhưng tại một thời điểm chỉ có tối đa 1 appointment đang active — đảm bảo ở tầng application
+    @OneToMany(mappedBy = "timeSlot", fetch = FetchType.LAZY)
+    private List<Appointment> appointments;
 
     @PrePersist
     protected void onCreate() {

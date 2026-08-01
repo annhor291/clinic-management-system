@@ -45,9 +45,12 @@ public class Appointment {
     @JoinColumn(name = "doctor_id", nullable = false)
     private Doctor doctor;
 
-    // 1 slot chỉ được đặt bởi 1 appointment
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "time_slot_id", nullable = false, unique = true)
+    // 1 slot tại 1 thời điểm chỉ có tối đa 1 appointment đang active (PENDING/CONFIRMED) —
+    // việc này được đảm bảo ở tầng application (BookingRuleEngine + pessimistic lock),
+    // không ép bằng unique constraint ở DB vì appointment đã CANCELLED/EXPIRED vẫn cần giữ
+    // lịch sử tham chiếu tới slot cũ, và slot đó có thể được đặt lại bởi appointment khác sau này.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "time_slot_id", nullable = false)
     private TimeSlot timeSlot;
 
     @Column(name = "appointment_time", nullable = false)
@@ -88,6 +91,18 @@ public class Appointment {
     @Column(name = "reminder_1h_sent", nullable = false)
     @Builder.Default
     private boolean reminder1hSent = false;
+
+    // ===== Hết hạn (Pending Expiry) =====
+    // Ghi lại thời điểm appointment bị Scheduler tự động chuyển sang EXPIRED
+    @Column(name = "expired_at")
+    private LocalDateTime expiredAt;
+
+    // Optimistic Locking: chống race condition giữa AppointmentExpiryScheduler
+    // (tự động expire PENDING quá hạn) và Receptionist/Admin confirm cùng lúc.
+    // Nếu 2 giao dịch cùng sửa 1 appointment, giao dịch sau sẽ nhận OptimisticLockException.
+    @Version
+    @Column(name = "version")
+    private Long version;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

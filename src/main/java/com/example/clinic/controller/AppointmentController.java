@@ -99,11 +99,27 @@ public class AppointmentController {
     }
 
     // PUT /api/v1/appointments/{id}/confirm
-    // Bác sĩ xác nhận lịch hẹn
+    // Lễ tân hoặc admin xác nhận lịch hẹn
     @PutMapping("/{id}/confirm")
     public ResponseEntity<ApiResponse<AppointmentResponse>> confirm(@PathVariable Long id) {
         AppointmentResponse appointment = appointmentService.confirm(id);
         return ResponseEntity.ok(ApiResponse.success("Xác nhận lịch hẹn thành công", appointment));
+    }
+
+    // PUT /api/v1/appointments/{id}/complete
+    // Đánh dấu lịch hẹn đã khám xong
+    @PutMapping("/{id}/complete")
+    public ResponseEntity<ApiResponse<AppointmentResponse>> complete(@PathVariable Long id) {
+        AppointmentResponse appointment = appointmentService.complete(id);
+        return ResponseEntity.ok(ApiResponse.success("Đánh dấu hoàn thành lịch hẹn thành công", appointment));
+    }
+
+    // PUT /api/v1/appointments/{id}/no-show
+    // Đánh dấu bệnh nhân không đến khám
+    @PutMapping("/{id}/no-show")
+    public ResponseEntity<ApiResponse<AppointmentResponse>> markNoShow(@PathVariable Long id) {
+        AppointmentResponse appointment = appointmentService.markNoShow(id);
+        return ResponseEntity.ok(ApiResponse.success("Đánh dấu không đến khám thành công", appointment));
     }
 
     // PUT /api/v1/appointments/{id}/cancel

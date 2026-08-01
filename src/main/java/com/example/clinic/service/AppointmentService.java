@@ -8,6 +8,7 @@ import com.example.clinic.dto.response.PageResponse;
 import com.example.clinic.entity.enums.AppointmentStatus;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public interface AppointmentService {
 
@@ -26,6 +27,12 @@ public interface AppointmentService {
     // Lấy danh sách lịch hẹn của bác sĩ
     PageResponse<AppointmentResponse> getByDoctor(Long doctorId, int page, int size);
 
+    // Tìm id các lịch hẹn PENDING đã quá hạn xác nhận — chỉ dùng nội bộ bởi AppointmentExpiryScheduler
+    List<Long> findExpirablePendingIds();
+
+    // Chuyển 1 lịch hẹn PENDING quá hạn sang EXPIRED, giải phóng slot — chỉ dùng nội bộ bởi Scheduler
+    void expireOne(Long appointmentId);
+
     // Tìm kiếm lịch hẹn — dùng cho Admin dashboard
     PageResponse<AppointmentResponse> search(
             Long patientId, Long doctorId, AppointmentStatus status,
@@ -34,6 +41,12 @@ public interface AppointmentService {
 
     // Xác nhận lịch hẹn (bác sĩ xác nhận)
     AppointmentResponse confirm(Long id);
+
+    // Đánh dấu lịch hẹn đã khám xong
+    AppointmentResponse complete(Long id);
+
+    // Đánh dấu bệnh nhân không đến khám
+    AppointmentResponse markNoShow(Long id);
 
     // Hủy lịch hẹn
     AppointmentResponse cancel(Long id, CancelRequest request);

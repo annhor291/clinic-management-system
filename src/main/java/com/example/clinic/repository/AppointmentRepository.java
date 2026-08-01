@@ -13,6 +13,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -40,6 +41,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     long countByAppointmentTimeBetween(LocalDateTime from, LocalDateTime to);
 
     boolean existsByTimeSlotIdAndStatusNot(Long timeSlotId, AppointmentStatus status);
+
+    // Kiểm tra slot có appointment nào đang thực sự chiếm dụng không —
+    // loại trừ cả CANCELLED và EXPIRED vì cả 2 đều đã giải phóng slot về AVAILABLE
+    boolean existsByTimeSlotIdAndStatusNotIn(Long timeSlotId, List<AppointmentStatus> excludedStatuses);
 
     // Tìm kiếm lịch hẹn có pagination + filter — dùng cho Admin dashboard
     @Query("""
@@ -86,6 +91,30 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to
     );
+
+    // Lấy toàn bộ lịch hẹn active (PENDING/CONFIRMED) của bệnh nhân trong 1 ngày cụ thể
+    // Dùng cho PatientOverlapRule và BufferTimeRule — kiểm tra theo time-range, không phụ thuộc slotId
+    @Query("""
+        SELECT a FROM Appointment a
+        WHERE a.patient.id = :patientId
+        AND a.status IN :activeStatuses
+        AND a.timeSlot.slotDate = :slotDate
+        AND (:excludeAppointmentId IS NULL OR a.id <> :excludeAppointmentId)
+        """)
+    List<Appointment> findActiveAppointmentsForPatientOnDate(
+            @Param("patientId") Long patientId,
+            @Param("activeStatuses") List<AppointmentStatus> activeStatuses,
+            @Param("slotDate") LocalDate slotDate,
+            @Param("excludeAppointmentId") Long excludeAppointmentId
+    );
+
+    // Tìm id các lịch hẹn PENDING đã tạo quá lâu mà chưa được xác nhận — dùng cho Pending Expiry Scheduler
+    @Query("""
+        SELECT a.id FROM Appointment a
+        WHERE a.status = 'PENDING'
+        AND a.createdAt < :cutoff
+        """)
+    List<Long> findExpirablePendingIds(@Param("cutoff") LocalDateTime cutoff);
 
     // QUERY THỐNG KÊ ADMIN DASHBOARD — dùng Projection thay vì Object[]
 

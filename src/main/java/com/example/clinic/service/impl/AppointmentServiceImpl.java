@@ -1,5 +1,12 @@
 package com.example.clinic.service.impl;
 
+import com.example.clinic.booking.availability.DoctorAvailabilityGateway;
+import com.example.clinic.booking.availability.PatientAvailabilityGateway;
+import com.example.clinic.booking.availability.PatientScheduleCheckResult;
+import com.example.clinic.booking.config.BookingProperties;
+import com.example.clinic.booking.engine.BookingContext;
+import com.example.clinic.booking.engine.BookingRuleEngine;
+import com.example.clinic.booking.event.*;
 import com.example.clinic.dto.request.AppointmentRequest;
 import com.example.clinic.dto.request.CancelRequest;
 import com.example.clinic.dto.request.RescheduleRequest;
@@ -22,6 +29,7 @@ import com.example.clinic.security.SecurityUtil;
 import com.example.clinic.service.AppointmentService;
 import com.example.clinic.mapper.AppointmentMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +41,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.UUID;
 
 
@@ -45,6 +54,11 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final TimeSlotRepository timeSlotRepository;
     private final AppointmentMapper appointmentMapper;
     private final DoctorRepository doctorRepository;
+    private final DoctorAvailabilityGateway doctorAvailabilityGateway;
+    private final BookingRuleEngine bookingRuleEngine;
+    private final PatientAvailabilityGateway patientAvailabilityGateway;
+    private final BookingProperties bookingProperties;
+    private final ApplicationEventPublisher eventPublisher;
 
 
     // ===== ĐẶT LỊCH KHÁM =====
@@ -68,37 +82,38 @@ public class AppointmentServiceImpl implements AppointmentService {
             }
         }
 
-        // 3. Tìm slot và lock lại để tránh double-booking
-        // PESSIMISTIC_WRITE sẽ khóa row ngay khi đọc
-        // Transaction khác muốn đặt cùng slot phải chờ transaction hiện tại hoàn thành
-        TimeSlot slot = timeSlotRepository.findByIdWithLock(request.getTimeSlotId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Không tìm thấy slot với id: " + request.getTimeSlotId()));
+        // 3. Khoá slot lại để tránh double-booking (PESSIMISTIC_WRITE)
+        TimeSlot slot = doctorAvailabilityGateway.lockSlot(request.getTimeSlotId());
 
-        // 4. Kiểm tra slot còn khả dụng không
-        if (slot.getStatus() != SlotStatus.AVAILABLE) {
-            throw new IllegalStateException("Slot này đã được đặt hoặc không còn khả dụng");
-        }
-
-        // 5. Kiểm tra thời gian đặt lịch phải nằm trong tương lai
+        // 4. Tính sẵn dữ liệu cần thiết rồi đóng gói vào BookingContext
         LocalDateTime slotDateTime = LocalDateTime.of(slot.getSlotDate(), slot.getStartTime());
-        if (slotDateTime.isBefore(LocalDateTime.now())) {
-            throw new IllegalStateException("Không thể đặt lịch cho thời gian đã qua");
-        }
+        boolean hasConflict = doctorAvailabilityGateway.hasConflictingAppointment(request.getTimeSlotId());
 
-        // 6. Kiểm tra slot đã có appointment active chưa
-        // Chỉ bỏ qua các appointment đã CANCELLED
-        boolean hasActiveAppointment = appointmentRepository
-                .existsByTimeSlotIdAndStatusNot(request.getTimeSlotId(), AppointmentStatus.CANCELLED);
-        if (hasActiveAppointment) {
-            throw new IllegalStateException("Slot này đã được đặt");
-        }
+        PatientScheduleCheckResult scheduleCheck = patientAvailabilityGateway.check(
+                patient.getId(), slot.getSlotDate(), slot.getStartTime(), slot.getEndTime(), null);
 
-        // 7. Đánh dấu slot đã được đặt
+        BookingContext context = new BookingContext(
+                slot.getDoctor().getId(),
+                patient.getId(),
+                slot.getSlotDate(),
+                slot.getStartTime(),
+                slot.getEndTime(),
+                null,
+                LocalDateTime.now(),
+                slot.getStatus(),
+                hasConflict,
+                scheduleCheck.hasOverlap(),
+                scheduleCheck.hasBufferViolation()
+        );
+
+        // 5. Chạy toàn bộ Business Rule
+        bookingRuleEngine.validate(context);
+
+        // 6. Đánh dấu slot đã được đặt
         slot.setStatus(SlotStatus.BOOKED);
         timeSlotRepository.save(slot);
 
-        // 8. Tạo lịch hẹn mới
+        // 7. Tạo lịch hẹn mới
         Appointment appointment = Appointment.builder()
                 .bookingCode(generatePlaceholder())
                 .patient(patient)
@@ -109,16 +124,18 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .note(request.getNote())
                 .build();
 
-        // 9. Save lần 1 → DB sinh id AUTO INCREMENT
+        // 8. Save lần 1 → DB sinh id AUTO INCREMENT
         Appointment saved = appointmentRepository.save(appointment);
 
-        // 10. Sinh bookingCode thật từ id
+        // 9. Sinh bookingCode thật từ id
         // id là AUTO INCREMENT của DB → unique tuyệt đối
         // Không bị reset sau restart, không duplicate khi multi-instance
         saved.setBookingCode(generateBookingCode(saved.getId()));
 
-        // 11. Save lần 2 → cập nhật bookingCode thật
+        // 10. Save lần 2 → cập nhật bookingCode thật
         saved = appointmentRepository.save(saved);
+
+        eventPublisher.publishEvent(new AppointmentBookedEvent(saved.getId()));
 
         return appointmentMapper.toResponse(saved);
     }
@@ -205,25 +222,127 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional
     public AppointmentResponse confirm(Long id) {
-        Appointment appointment = findByIdOrThrow(id);
-
-        // Chỉ DOCTOR của appointment hoặc ADMIN mới được confirm
-        if (!SecurityUtil.isAdmin()) {
-            if (!SecurityUtil.isDoctor()) {
-                throw new AccessDeniedException("Chỉ bác sĩ hoặc admin mới có thể xác nhận lịch hẹn");
-            }
-            Long currentUserId = SecurityUtil.getCurrentUserId();
-            if (!appointment.getDoctor().getUser().getId().equals(currentUserId)) {
-                throw new AccessDeniedException("Bạn chỉ có thể xác nhận lịch hẹn của chính mình");
-            }
+        if (!SecurityUtil.isAdminOrReceptionist()) {
+            throw new AccessDeniedException("Chỉ lễ tân hoặc admin mới có thể xác nhận lịch hẹn");
         }
+
+        Appointment appointment = findByIdOrThrow(id);
 
         if (appointment.getStatus() != AppointmentStatus.PENDING) {
             throw new IllegalStateException("Chỉ có thể xác nhận lịch hẹn đang ở trạng thái PENDING");
         }
 
         appointment.setStatus(AppointmentStatus.CONFIRMED);
-        return appointmentMapper.toResponse(appointmentRepository.save(appointment));
+
+        Appointment saved = appointmentRepository.save(appointment);
+        eventPublisher.publishEvent(new AppointmentConfirmedEvent(saved.getId()));
+
+        return appointmentMapper.toResponse(saved);
+    }
+
+    // ===== ĐÁNH DẤU HOÀN THÀNH =====
+    @Override
+    @Transactional
+    public AppointmentResponse complete(Long id) {
+        Appointment appointment = findByIdOrThrow(id);
+
+        if (!SecurityUtil.isAdminOrReceptionist()) {
+            if (!SecurityUtil.isDoctor()) {
+                throw new AccessDeniedException("Chỉ bác sĩ hoặc admin/lễ tân mới có thể đánh dấu hoàn thành");
+            }
+            if (!appointment.getDoctor().getUser().getId().equals(SecurityUtil.getCurrentUserId())) {
+                throw new AccessDeniedException("Bạn chỉ có thể đánh dấu hoàn thành lịch hẹn của chính mình");
+            }
+        }
+
+        if (appointment.getStatus() != AppointmentStatus.CONFIRMED) {
+            throw new IllegalStateException("Chỉ có thể đánh dấu hoàn thành lịch hẹn đang ở trạng thái CONFIRMED");
+        }
+
+        if (appointment.getAppointmentTime().isAfter(LocalDateTime.now())) {
+            throw new IllegalStateException("Không thể đánh dấu hoàn thành khi giờ hẹn chưa diễn ra");
+        }
+
+        appointment.setStatus(AppointmentStatus.COMPLETED);
+
+        TimeSlot slot = appointment.getTimeSlot();
+        slot.setStatus(SlotStatus.COMPLETED);
+        timeSlotRepository.save(slot);
+
+        Appointment saved = appointmentRepository.save(appointment);
+        eventPublisher.publishEvent(new AppointmentCompletedEvent(saved.getId()));
+
+        return appointmentMapper.toResponse(saved);
+    }
+
+    // ===== ĐÁNH DẤU KHÔNG ĐẾN KHÁM =====
+    @Override
+    @Transactional
+    public AppointmentResponse markNoShow(Long id) {
+        Appointment appointment = findByIdOrThrow(id);
+
+        if (!SecurityUtil.isAdminOrReceptionist()) {
+            if (!SecurityUtil.isDoctor()) {
+                throw new AccessDeniedException("Chỉ bác sĩ hoặc admin/lễ tân mới có thể đánh dấu không đến khám");
+            }
+            if (!appointment.getDoctor().getUser().getId().equals(SecurityUtil.getCurrentUserId())) {
+                throw new AccessDeniedException("Bạn chỉ có thể thao tác trên lịch hẹn của chính mình");
+            }
+        }
+
+        if (appointment.getStatus() != AppointmentStatus.CONFIRMED) {
+            throw new IllegalStateException("Chỉ có thể đánh dấu không đến khám cho lịch hẹn đang ở trạng thái CONFIRMED");
+        }
+
+        if (appointment.getAppointmentTime().isAfter(LocalDateTime.now())) {
+            throw new IllegalStateException("Không thể đánh dấu không đến khám khi giờ hẹn chưa diễn ra");
+        }
+
+        appointment.setStatus(AppointmentStatus.NO_SHOW);
+
+        TimeSlot slot = appointment.getTimeSlot();
+        slot.setStatus(SlotStatus.COMPLETED); // giờ hẹn đã qua, slot không còn khả dụng để đặt lại
+        timeSlotRepository.save(slot);
+
+        Appointment saved = appointmentRepository.save(appointment);
+        eventPublisher.publishEvent(new AppointmentNoShowEvent(saved.getId()));
+
+        return appointmentMapper.toResponse(saved);
+    }
+
+    // ===== TÌM LỊCH HẸN PENDING QUÁ HẠN =====
+    @Override
+    @Transactional(readOnly = true)
+    public List<Long> findExpirablePendingIds() {
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(bookingProperties.getPendingExpiryMinutes());
+        return appointmentRepository.findExpirablePendingIds(cutoff);
+    }
+
+    // ===== CHUYỂN 1 LỊCH HẸN SANG EXPIRED =====
+    @Override
+    @Transactional
+    public void expireOne(Long appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId).orElse(null);
+        if (appointment == null) {
+            return; // đã bị xử lý ở nơi khác, bỏ qua
+        }
+
+        // Kiểm tra lại trạng thái — có thể đã được confirm/cancel giữa lúc lấy danh sách và lúc xử lý
+        if (appointment.getStatus() != AppointmentStatus.PENDING) {
+            return;
+        }
+
+        appointment.setStatus(AppointmentStatus.EXPIRED);
+        appointment.setExpiredAt(LocalDateTime.now());
+        // @Version trên Appointment sẽ tự ném OptimisticLockingFailureException
+        // nếu appointment này vừa bị confirm/cancel bởi transaction khác ngay trước khi save
+        appointmentRepository.save(appointment);
+
+        TimeSlot slot = appointment.getTimeSlot();
+        if (slot.getStatus() == SlotStatus.BOOKED) {
+            slot.setStatus(SlotStatus.AVAILABLE);
+            timeSlotRepository.save(slot);
+        }
     }
 
     // ===== HỦY LỊCH HẸN =====
@@ -240,6 +359,17 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new IllegalStateException("Không thể hủy lịch hẹn ở trạng thái hiện tại");
         }
 
+        // Chỉ áp giới hạn thời gian tối thiểu khi lịch đã CONFIRMED —
+        // lịch PENDING chưa được xác nhận nên hủy ngay lập tức không ảnh hưởng ai
+        if (appointment.getStatus() == AppointmentStatus.CONFIRMED) {
+            LocalDateTime latestAllowed = appointment.getAppointmentTime()
+                    .minusHours(bookingProperties.getCancelWindowHours());
+            if (LocalDateTime.now().isAfter(latestAllowed)) {
+                throw new IllegalStateException(
+                        "Phải hủy lịch trước ít nhất " + bookingProperties.getCancelWindowHours() + " giờ so với giờ hẹn");
+            }
+        }
+
         appointment.setStatus(AppointmentStatus.CANCELLED);
         appointment.setCancellationReason(request.getReason());
         appointment.setCancelledAt(LocalDateTime.now());
@@ -249,7 +379,10 @@ public class AppointmentServiceImpl implements AppointmentService {
         slot.setStatus(SlotStatus.AVAILABLE);
         timeSlotRepository.save(slot);
 
-        return appointmentMapper.toResponse(appointmentRepository.save(appointment));
+        Appointment saved = appointmentRepository.save(appointment);
+        eventPublisher.publishEvent(new AppointmentCancelledEvent(saved.getId()));
+
+        return appointmentMapper.toResponse(saved);
 
     }
 
@@ -274,19 +407,43 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new IllegalStateException("Không thể đổi lịch hẹn ở trạng thái hiện tại");
         }
 
-        TimeSlot newSlot = timeSlotRepository.findByIdWithLock(request.getNewTimeSlotId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Không tìm thấy slot với id: " + request.getNewTimeSlotId()));
-
-        if (newSlot.getStatus() != SlotStatus.AVAILABLE) {
-            throw new IllegalStateException("Slot mới đã được đặt hoặc không còn khả dụng");
+        // Giới hạn thời gian tối thiểu — chỉ áp dụng khi lịch cũ đã CONFIRMED
+        if (oldAppointment.getStatus() == AppointmentStatus.CONFIRMED) {
+            LocalDateTime latestAllowed = oldAppointment.getAppointmentTime()
+                    .minusHours(bookingProperties.getRescheduleWindowHours());
+            if (LocalDateTime.now().isAfter(latestAllowed)) {
+                throw new IllegalStateException(
+                        "Phải đổi lịch trước ít nhất " + bookingProperties.getRescheduleWindowHours() + " giờ so với giờ hẹn");
+            }
         }
 
-        LocalDateTime newSlotDateTime = LocalDateTime.of(
-                newSlot.getSlotDate(), newSlot.getStartTime());
-        if (newSlotDateTime.isBefore(LocalDateTime.now())) {
-            throw new IllegalStateException("Không thể đổi sang lịch đã qua");
-        }
+        // Khoá slot mới lại để tránh double-booking
+        TimeSlot newSlot = doctorAvailabilityGateway.lockSlot(request.getNewTimeSlotId());
+
+        // Tính sẵn dữ liệu rồi chạy lại TOÀN BỘ Rule Engine — giống hệt lúc book(),
+        // chỉ khác excludeAppointmentId = id của lịch cũ để không tự đụng chính mình
+        boolean hasConflict = doctorAvailabilityGateway.hasConflictingAppointment(request.getNewTimeSlotId());
+        PatientScheduleCheckResult scheduleCheck = patientAvailabilityGateway.check(
+                oldAppointment.getPatient().getId(), newSlot.getSlotDate(),
+                newSlot.getStartTime(), newSlot.getEndTime(), oldAppointment.getId());
+
+        BookingContext context = new BookingContext(
+                newSlot.getDoctor().getId(),
+                oldAppointment.getPatient().getId(),
+                newSlot.getSlotDate(),
+                newSlot.getStartTime(),
+                newSlot.getEndTime(),
+                oldAppointment.getId(),
+                LocalDateTime.now(),
+                newSlot.getStatus(),
+                hasConflict,
+                scheduleCheck.hasOverlap(),
+                scheduleCheck.hasBufferViolation()
+        );
+
+        bookingRuleEngine.validate(context);
+
+        LocalDateTime newSlotDateTime = LocalDateTime.of(newSlot.getSlotDate(), newSlot.getStartTime());
 
         // Giải phóng slot cũ → AVAILABLE
         TimeSlot oldSlot = oldAppointment.getTimeSlot();
@@ -316,14 +473,11 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .rescheduledFrom(oldAppointment)
                 .build();
 
-        // Save lần 1 → có id từ DB
         Appointment saved = appointmentRepository.save(newAppointment);
-
-        // Sinh bookingCode thật từ id → unique tuyệt đối
         saved.setBookingCode(generateBookingCode(saved.getId()));
-
-        // Save lần 2 → cập nhật bookingCode thật
         saved = appointmentRepository.save(saved);
+
+        eventPublisher.publishEvent(new AppointmentRescheduledEvent(oldAppointment.getId(), saved.getId()));
 
         return appointmentMapper.toResponse(saved);
     }
