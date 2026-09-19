@@ -86,5 +86,27 @@ public class EmailServiceImpl implements EmailService {
         sendEmail(to, subject, body);
     }
 
+    // Đồng bộ — trả về true/false để NotificationService biết chính xác kết quả gửi
+    @Override
+    public boolean sendEmailSync(String to, String subject, String body) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail, fromName);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(body, true);
+
+            mailSender.send(message);
+            log.info("Đã gửi email (sync) tới {}", to);
+            return true;
+
+        } catch (Exception e) {
+            log.error("Gửi email (sync) thất bại tới {}: {}", to, e.getMessage());
+            return false;
+        }
+    }
+
 
 }

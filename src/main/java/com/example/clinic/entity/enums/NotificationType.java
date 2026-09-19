@@ -5,6 +5,9 @@ public enum NotificationType {
     APPOINTMENT_CONFIRMED,    // Bác sĩ xác nhận
     APPOINTMENT_CANCELLED,    // Lịch bị huỷ
     APPOINTMENT_COMPLETED,    // Khám xong
+    APPOINTMENT_NO_SHOW,
+    APPOINTMENT_EXPIRED,
+    APPOINTMENT_RESCHEDULED,
     APPOINTMENT_REMINDER_24H, // Nhắc trước 24 giờ (Scheduler)
     APPOINTMENT_REMINDER_1H,  // Nhắc trước 1 giờ  (Scheduler)
     WELCOME,                  // Chào mừng đăng ký

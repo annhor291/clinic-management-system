@@ -191,4 +191,16 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate
     );
+
+    // JOIN FETCH đủ patient.user và doctor.user — dùng cho NotificationService,
+    // tránh lazy-loading exception khi Listener chạy trong transaction riêng (AFTER_COMMIT)
+    @Query("""
+        SELECT a FROM Appointment a
+        JOIN FETCH a.patient p
+        JOIN FETCH p.user
+        JOIN FETCH a.doctor d
+        JOIN FETCH d.user
+        WHERE a.id = :id
+        """)
+    Optional<Appointment> findByIdWithPatientAndDoctorUser(@Param("id") Long id);
 }
