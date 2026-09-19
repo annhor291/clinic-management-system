@@ -53,4 +53,10 @@ public interface AppointmentService {
 
     // Đổi lịch hẹn
     AppointmentResponse reschedule(Long id, RescheduleRequest request);
+
+    // Hủy lịch hẹn tự động do bác sĩ nghỉ phép/đột xuất được duyệt.
+    // Khác với cancel() công khai: KHÔNG áp CancelWindow rule (vì đây là hệ thống/admin xử lý
+    // tình huống hợp lệ, không phải người dùng tự ý hủy sát giờ). Chỉ dùng nội bộ bởi
+    // DoctorLeaveRequestService khi duyệt đơn nghỉ.
+    AppointmentResponse cancelDueToDoctorLeave(Long id, String reason);
 }

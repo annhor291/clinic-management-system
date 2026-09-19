@@ -2,8 +2,10 @@ package com.example.clinic.service;
 
 import com.example.clinic.dto.request.DoctorScheduleRequest;
 import com.example.clinic.dto.response.DoctorScheduleResponse;
+import com.example.clinic.entity.enums.ShiftType;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 public interface DoctorScheduleService {
@@ -29,4 +31,10 @@ public interface DoctorScheduleService {
 
     // Kích hoạt lại ca làm việc
     DoctorScheduleResponse activate(Long id);
+
+    // Sinh 1 ca làm việc tự động từ luồng đăng ký lịch tuần đã được duyệt.
+    // Không áp dụng các validate dành cho luồng tạo thủ công qua API công khai.
+    DoctorScheduleResponse createFromApprovedRegistration(Long doctorId, LocalDate workDate,
+                                                          LocalTime startTime, LocalTime endTime,
+                                                          ShiftType shiftType);
 }

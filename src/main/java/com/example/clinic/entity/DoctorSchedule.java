@@ -1,10 +1,8 @@
 package com.example.clinic.entity;
 
+import com.example.clinic.entity.enums.ShiftType;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,6 +18,8 @@ import java.util.List;
         }
 )
 @Data
+@ToString(exclude = {"doctor", "timeSlots"})
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -27,6 +27,7 @@ public class DoctorSchedule {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -46,6 +47,11 @@ public class DoctorSchedule {
     @Column(name = "slot_duration_minutes", nullable = false)
     @Builder.Default
     private Integer slotDurationMinutes = 30;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "shift_type", nullable = false, length = 10)
+    @Builder.Default
+    private ShiftType shiftType = ShiftType.CUSTOM;
 
     @Column(name = "active", nullable = false)
     @Builder.Default

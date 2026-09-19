@@ -386,6 +386,35 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     }
 
+    // ===== HỦY LỊCH HẸN DO BÁC SĨ NGHỈ (nội bộ, không qua CancelWindow) =====
+    @Override
+    @Transactional
+    public AppointmentResponse cancelDueToDoctorLeave(Long id, String reason) {
+        Appointment appointment = findByIdOrThrow(id);
+
+        if (appointment.getStatus() != AppointmentStatus.PENDING &&
+                appointment.getStatus() != AppointmentStatus.CONFIRMED) {
+            throw new IllegalStateException("Không thể hủy lịch hẹn ở trạng thái hiện tại");
+        }
+
+        // Cố tình BỎ QUA CancelWindow rule — bác sĩ nghỉ đột xuất có thể xảy ra bất kỳ lúc nào,
+        // kể cả trong vòng 2 giờ tới, không nên bị chặn bởi rule dành cho người dùng tự huỷ.
+
+        appointment.setStatus(AppointmentStatus.CANCELLED);
+        appointment.setCancellationReason(reason);
+        appointment.setCancelledAt(LocalDateTime.now());
+        appointment.setCancelledBy(getCancelledByFromContext());
+
+        TimeSlot slot = appointment.getTimeSlot();
+        slot.setStatus(SlotStatus.AVAILABLE);
+        timeSlotRepository.save(slot);
+
+        Appointment saved = appointmentRepository.save(appointment);
+        eventPublisher.publishEvent(new AppointmentCancelledEvent(saved.getId()));
+
+        return appointmentMapper.toResponse(saved);
+    }
+
     // ===== ĐỔI LỊCH HẸN =====
     @Override
     @Transactional

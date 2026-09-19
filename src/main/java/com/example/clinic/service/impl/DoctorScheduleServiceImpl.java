@@ -5,6 +5,7 @@ import com.example.clinic.dto.response.DoctorScheduleResponse;
 import com.example.clinic.entity.Doctor;
 import com.example.clinic.entity.DoctorSchedule;
 import com.example.clinic.entity.TimeSlot;
+import com.example.clinic.entity.enums.ShiftType;
 import com.example.clinic.entity.enums.SlotStatus;
 import com.example.clinic.exception.DuplicateResourceException;
 import com.example.clinic.exception.ResourceNotFoundException;
@@ -104,6 +105,46 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         savedSchedule.setTimeSlots(slots);
         return scheduleMapper.toResponseWithSlots(savedSchedule);
     }
+
+    // ===== Sinh ca làm việc tự động từ đăng ký tuần đã duyệt =====
+    // Khác với create(): không check ownership, không check "đã có ca trong ngày" theo kiểu cũ
+    // (giờ unique theo doctorId+workDate+shiftType, không phải chỉ doctorId+workDate),
+    // không check "ca đã kết thúc trong ngày hôm nay" (đăng ký luôn cho tuần trong tương lai).
+    @Override
+    @Transactional
+    public DoctorScheduleResponse createFromApprovedRegistration(
+            Long doctorId, LocalDate workDate, LocalTime startTime, LocalTime endTime, ShiftType shiftType) {
+
+        Doctor doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy bác sĩ với id: " + doctorId));
+
+        if (scheduleRepository.existsByDoctorIdAndWorkDateAndShiftType(doctorId, workDate, shiftType)) {
+            throw new DuplicateResourceException(
+                    "Bác sĩ đã có ca " + shiftType + " vào ngày " + workDate);
+        }
+
+        DoctorSchedule schedule = DoctorSchedule.builder()
+                .doctor(doctor)
+                .workDate(workDate)
+                .startTime(startTime)
+                .endTime(endTime)
+                .slotDurationMinutes(30)
+                .active(true)
+                .shiftType(shiftType)
+                .note("Sinh tự động từ đăng ký lịch tuần")
+                .build();
+
+        DoctorSchedule savedSchedule = scheduleRepository.save(schedule);
+
+        List<TimeSlot> slots = generateTimeSlots(savedSchedule);
+        if (!slots.isEmpty()) {
+            timeSlotRepository.saveAll(slots);
+        }
+        savedSchedule.setTimeSlots(slots);
+
+        return scheduleMapper.toResponseWithSlots(savedSchedule);
+    }
+
 
     // Lấy chi tiết ca làm việc kèm slot
     @Override

@@ -3,10 +3,7 @@ package com.example.clinic.entity;
 import com.example.clinic.entity.enums.AuthProvider;
 import com.example.clinic.entity.enums.Role;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,7 +12,6 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
-import static org.aspectj.weaver.tools.cache.SimpleCacheFactory.enabled;
 
 
 @Entity
@@ -25,12 +21,15 @@ import static org.aspectj.weaver.tools.cache.SimpleCacheFactory.enabled;
         }
 )
 @Data
+@ToString(exclude = {"patient", "doctor", "notifications"})
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @Column(name = "username", nullable = false, unique = true, length = 100)

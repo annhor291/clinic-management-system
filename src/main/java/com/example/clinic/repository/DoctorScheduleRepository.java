@@ -1,6 +1,7 @@
 package com.example.clinic.repository;
 
 import com.example.clinic.entity.DoctorSchedule;
+import com.example.clinic.entity.enums.ShiftType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,6 +19,8 @@ public interface DoctorScheduleRepository extends JpaRepository<DoctorSchedule, 
 
     // Kiểm tra bác sĩ đã có ca làm việc trong ngày đó chưa
     boolean existsByDoctorIdAndWorkDate(Long doctorId, LocalDate workDate);
+
+    boolean existsByDoctorIdAndWorkDateAndShiftType(Long doctorId, LocalDate workDate, ShiftType shiftType);
 
     // Lấy tất cả ca làm việc của bác sĩ từ ngày bắt đầu đến ngày kết thúc
     // Dùng để xem lịch theo tuần

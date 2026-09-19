@@ -38,7 +38,7 @@ public class SecurityConfig {
                 // Tắt CSRF vì dùng JWT (stateless)
                 .csrf(AbstractHttpConfigurer::disable)
 
-                // Thêm đoạn này
+
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration config = new CorsConfiguration();
                     config.setAllowedOrigins(List.of(
@@ -136,8 +136,50 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/doctor-schedules/**")
                         .hasAnyRole("ADMIN", "RECEPTIONIST", "DOCTOR")
 
+                        .requestMatchers(HttpMethod.POST, "/api/v1/work-schedule/registrations")
+                        .hasRole("DOCTOR")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/work-schedule/registrations/me")
+                        .hasRole("DOCTOR")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/work-schedule/registrations/pending")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/work-schedule/registrations/doctor/**")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/work-schedule/registrations/**")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST", "DOCTOR")
+
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/work-schedule/registrations/**")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST")
+
                         .requestMatchers("/api/v1/time-slots/**")
                         .hasAnyRole("ADMIN", "RECEPTIONIST", "DOCTOR", "PATIENT")
+
+                        // ===== Đơn xin nghỉ (Doctor Leave Request) =====
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/work-schedule/leave-requests")
+                        .hasRole("DOCTOR")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/work-schedule/leave-requests/me")
+                        .hasRole("DOCTOR")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/work-schedule/leave-requests/pending")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/work-schedule/leave-requests/doctor/**")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/work-schedule/leave-requests/**")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST", "DOCTOR")
+
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/work-schedule/leave-requests/**")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST")
+
+                        // ===== Log nghiệp vụ lịch làm việc (chỉ Admin/Receptionist xem) =====
+                        .requestMatchers(HttpMethod.GET, "/api/v1/work-schedule/audit-logs/**")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST")
 
 
                         // Tất cả request còn lại cần xác thực

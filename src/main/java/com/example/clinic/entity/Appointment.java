@@ -3,10 +3,7 @@ package com.example.clinic.entity;
 import com.example.clinic.entity.enums.AppointmentStatus;
 import com.example.clinic.entity.enums.CancelledBy;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,6 +21,8 @@ import java.util.List;
         }
 )
 @Data
+@ToString(exclude = {"patient", "doctor", "timeSlot", "rescheduledFrom", "notifications"})
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -31,6 +30,7 @@ public class Appointment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     // Mã hiển thị cho người dùng. VD: APT-20260516-0001

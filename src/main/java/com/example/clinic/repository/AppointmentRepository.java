@@ -46,6 +46,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     // loại trừ cả CANCELLED và EXPIRED vì cả 2 đều đã giải phóng slot về AVAILABLE
     boolean existsByTimeSlotIdAndStatusNotIn(Long timeSlotId, List<AppointmentStatus> excludedStatuses);
 
+    Optional<Appointment> findByTimeSlotIdAndStatusIn(Long timeSlotId, List<AppointmentStatus> statuses);
+
     // Tìm kiếm lịch hẹn có pagination + filter — dùng cho Admin dashboard
     @Query("""
             SELECT a FROM Appointment a
