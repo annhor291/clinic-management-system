@@ -1,5 +1,6 @@
 package com.example.clinic.service;
 
+import com.example.clinic.dto.request.ManagedPatientCreateRequest;
 import com.example.clinic.dto.request.PatientCreateRequest;
 import com.example.clinic.dto.request.PatientUpdateRequest;
 import com.example.clinic.dto.response.PageResponse;
@@ -25,4 +26,11 @@ public interface PatientService {
     void delete(Long id);
 
     PatientResponse getMe();
+
+    // Tài khoản đang đăng nhập tạo hồ sơ cho người thân (không có tài khoản riêng) —
+    // giới hạn số lượng theo booking.max-managed-patients
+    PatientResponse createManaged(ManagedPatientCreateRequest request);
+
+    // Xem danh sách hồ sơ người thân do tài khoản đang đăng nhập quản lý
+    java.util.List<PatientResponse> getMyManagedPatients();
 }

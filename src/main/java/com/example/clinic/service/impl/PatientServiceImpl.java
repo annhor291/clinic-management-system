@@ -1,5 +1,7 @@
 package com.example.clinic.service.impl;
 
+import com.example.clinic.booking.config.BookingProperties;
+import com.example.clinic.dto.request.ManagedPatientCreateRequest;
 import com.example.clinic.dto.request.PatientCreateRequest;
 import com.example.clinic.dto.request.PatientUpdateRequest;
 import com.example.clinic.dto.response.PageResponse;
@@ -28,6 +30,7 @@ public class PatientServiceImpl implements PatientService {
     private final PatientRepository patientRepository;
     private final UserRepository userRepository;
     private final PatientMapper patientMapper;
+    private final BookingProperties bookingProperties;
 
     // Lấy danh sách bệnh nhân có pagination + filter
     @Override
@@ -134,6 +137,40 @@ public class PatientServiceImpl implements PatientService {
         } catch (ResourceNotFoundException e) {
             throw new ResourceNotFoundException("Bạn chưa có hồ sơ bệnh nhân");
         }
+    }
+
+    @Override
+    @Transactional
+    public PatientResponse createManaged(ManagedPatientCreateRequest request) {
+        User currentUser = userRepository.findById(SecurityUtil.getCurrentUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản hiện tại"));
+
+        long currentCount = patientRepository.countByManagedByIdAndUserIsNull(currentUser.getId());
+        if (currentCount >= bookingProperties.getMaxManagedPatients()) {
+            throw new IllegalStateException(
+                    "Bạn đã đạt giới hạn " + bookingProperties.getMaxManagedPatients() + " hồ sơ người thân");
+        }
+
+        if (request.getInsuranceNumber() != null &&
+                patientRepository.existsByInsuranceNumber(request.getInsuranceNumber())) {
+            throw new DuplicateResourceException(
+                    "Số BHYT '" + request.getInsuranceNumber() + "' đã được sử dụng");
+        }
+
+        Patient patient = patientMapper.toEntity(request);
+        patient.setManagedBy(currentUser);
+        // user để null — đây chính là điểm khác biệt với create() công khai
+
+        Patient saved = patientRepository.save(patient);
+        return patientMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<PatientResponse> getMyManagedPatients() {
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        return patientRepository.findByManagedByIdAndUserIsNull(currentUserId)
+                .stream().map(patientMapper::toResponse).toList();
     }
 
     // ===== Private helper =====

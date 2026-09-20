@@ -1,5 +1,6 @@
 package com.example.clinic.controller;
 
+import com.example.clinic.dto.request.ManagedPatientCreateRequest;
 import com.example.clinic.dto.request.PatientCreateRequest;
 import com.example.clinic.dto.request.PatientUpdateRequest;
 import com.example.clinic.dto.response.ApiResponse;
@@ -94,5 +95,24 @@ public class PatientController {
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
         patientService.delete(id);
         return ResponseEntity.ok(ApiResponse.success("Xoá bệnh nhân thành công"));
+    }
+
+    // POST /api/v1/patients/managed
+    // Tài khoản đang đăng nhập tự tạo hồ sơ cho người thân (không cần userId, không cần Admin)
+    @PostMapping("/managed")
+    public ResponseEntity<ApiResponse<PatientResponse>> createManaged(
+            @Valid @RequestBody ManagedPatientCreateRequest request) {
+        PatientResponse patient = patientService.createManaged(request);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Tạo hồ sơ người thân thành công", patient));
+    }
+
+    // GET /api/v1/patients/managed
+    // Xem danh sách hồ sơ người thân do mình quản lý
+    @GetMapping("/managed")
+    public ResponseEntity<ApiResponse<java.util.List<PatientResponse>>> getMyManagedPatients() {
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách hồ sơ người thân thành công",
+                patientService.getMyManagedPatients()));
     }
 }

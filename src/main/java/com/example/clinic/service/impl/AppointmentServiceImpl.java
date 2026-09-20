@@ -77,8 +77,9 @@ public class AppointmentServiceImpl implements AppointmentService {
         // PATIENT chỉ được đặt lịch cho chính mình
         // ADMIN và RECEPTIONIST có thể đặt lịch thay cho bệnh nhân
         if (SecurityUtil.isPatient()) {
-            if (!patient.getUser().getId().equals(SecurityUtil.getCurrentUserId())) {
-                throw new AccessDeniedException("Bạn chỉ có thể đặt lịch cho chính mình");
+            if (!patient.isOwnedByUser(SecurityUtil.getCurrentUserId())) {
+                throw new AccessDeniedException("Bạn chỉ có thể đặt lịch cho chính mình" +
+                        " hoặc người thân đang quản lý");
             }
         }
 
@@ -168,8 +169,8 @@ public class AppointmentServiceImpl implements AppointmentService {
         if (SecurityUtil.isPatient()) {
             Patient patient = patientRepository.findById(patientId)
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy bệnh nhân"));
-            if (!patient.getUser().getId().equals(SecurityUtil.getCurrentUserId())) {
-                throw new AccessDeniedException("Bạn chỉ có thể xem lịch của chính mình");
+            if (!patient.isOwnedByUser(SecurityUtil.getCurrentUserId())) {
+                throw new AccessDeniedException("Bạn chỉ có thể xem lịch của chính mình hoặc người thân đang quản lý");
             }
         }
         Pageable pageable = PageRequest.of(page, size);
@@ -425,9 +426,8 @@ public class AppointmentServiceImpl implements AppointmentService {
             if (!SecurityUtil.isPatient()) {
                 throw new AccessDeniedException("Bạn không có quyền đổi lịch hẹn này");
             }
-            if (!oldAppointment.getPatient().getUser().getId()
-                    .equals(SecurityUtil.getCurrentUserId())) {
-                throw new AccessDeniedException("Bạn chỉ có thể đổi lịch hẹn của chính mình");
+            if (!oldAppointment.getPatient().isOwnedByUser(SecurityUtil.getCurrentUserId())) {
+                throw new AccessDeniedException("Bạn chỉ có thể đổi lịch hẹn của chính mình hoặc người thân đang quản lý");
             }
         }
 
@@ -540,9 +540,9 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         // PATIENT chỉ được xem lịch của chính mình
         else if (SecurityUtil.isPatient()) {
-           if (!appointment.getPatient().getUser().getId().equals(currentUserId)) {
-             throw new AccessDeniedException("Bạn không có quyền xem lịch hẹn này");
-           }
+            if (!appointment.getPatient().isOwnedByUser(currentUserId)) {
+                throw new AccessDeniedException("Bạn không có quyền xem lịch hẹn này");
+            }
         }
     }
 
@@ -568,8 +568,8 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         // PATIENT chỉ được hủy lịch của chính mình
         if (SecurityUtil.isPatient()) {
-            if (!appointment.getPatient().getUser().getId().equals(currentUserId)) {
-                throw new AccessDeniedException("Bạn chỉ có thể hủy lịch hẹn của chính mình");
+            if (!appointment.getPatient().isOwnedByUser(currentUserId)) {
+                throw new AccessDeniedException("Bạn chỉ có thể hủy lịch hẹn của chính mình hoặc người thân đang quản lý");
             }
             return CancelledBy.PATIENT;
         }

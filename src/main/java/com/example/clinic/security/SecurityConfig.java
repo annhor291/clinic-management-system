@@ -80,6 +80,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/patients/me")
                         .hasRole("PATIENT")
 
+                        // Quản lý hồ sơ người thân — bất kỳ ai đã đăng nhập đều được dùng (không giới hạn role)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/patients/managed")
+                        .authenticated()
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/patients/managed")
+                        .authenticated()
+
                         // Admin xem hồ sơ bệnh nhân theo userId
                         .requestMatchers(HttpMethod.GET, "/api/v1/patients/user/**")
                         .hasAnyRole("ADMIN", "RECEPTIONIST")

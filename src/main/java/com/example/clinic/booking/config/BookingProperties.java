@@ -23,4 +23,8 @@ public class BookingProperties {
 
     // Thời gian tối đa giữ trạng thái PENDING trước khi tự động chuyển EXPIRED (phút)
     private int pendingExpiryMinutes = 30;
+
+    // Giới hạn số hồ sơ người thân (không có tài khoản riêng) mỗi tài khoản được quản lý —
+    // chống dữ liệu rác (spam tạo hồ sơ ảo)
+    private int maxManagedPatients = 10;
 }

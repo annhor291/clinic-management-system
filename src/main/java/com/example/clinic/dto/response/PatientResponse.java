@@ -40,6 +40,11 @@ public class PatientResponse {
     private String emergencyContactName;
     private String emergencyContactPhone;
 
+    private boolean isManaged;          // true = hồ sơ người thân (không có tài khoản riêng)
+    private Long managedByUserId;       // id tài khoản đang quản lý hồ sơ này (chỉ có giá trị khi isManaged=true)
+    private String contactEmail;
+    private String relationshipLabel;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -32,6 +32,19 @@ public class Patient {
     @JoinColumn(name = "user_id")
     private User user;
 
+    // Tài khoản quản lý hồ sơ này — CHỈ có giá trị khi user = null (hồ sơ người thân, không tự đăng nhập)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "managed_by_user_id")
+    private User managedBy;
+
+    // Email riêng của người thân để nhận thông báo — không dùng để đăng nhập, chỉ để gửi mail
+    @Column(name = "contact_email", length = 255)
+    private String contactEmail;
+
+    // Hiển thị UI — VD "Mẹ", "Con", "Bản thân"
+    @Column(name = "relationship_label", length = 50)
+    private String relationshipLabel;
+
     // ===== Thông tin cá nhân =====
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
@@ -79,6 +92,22 @@ public class Patient {
     // ===== Relationships =====
     @OneToMany(mappedBy = "patient", fetch = FetchType.LAZY)
     private List<Appointment> appointments;
+
+    // Kiểm tra 1 userId có quyền sở hữu/quản lý hồ sơ bệnh nhân này không —
+    // dùng chung cho mọi ownership check trong AppointmentServiceImpl, thay thế cách gọi
+    // patient.getUser().getId().equals(...) trực tiếp (sẽ NPE với hồ sơ người thân không có user).
+    public boolean isOwnedByUser(Long userId) {
+        if (userId == null) return false;
+        if (user != null) return user.getId().equals(userId);
+        return managedBy != null && managedBy.getId().equals(userId);
+    }
+
+    // Email dùng để gửi thông báo — ưu tiên email tài khoản chính chủ, nếu không có (hồ sơ người thân)
+    // thì dùng contactEmail riêng nếu được nhập, cuối cùng fallback về null (không gửi được)
+    public String getNotificationEmail() {
+        if (user != null) return user.getEmail();
+        return contactEmail;
+    }
 
     // Tự động gán createdAt và updatedAt ngay trước khi INSERT vào database
     @PrePersist

@@ -2,6 +2,7 @@ package com.example.clinic.service.impl;
 
 import com.example.clinic.entity.Appointment;
 import com.example.clinic.entity.Notification;
+import com.example.clinic.entity.Patient;
 import com.example.clinic.entity.User;
 import com.example.clinic.entity.enums.NotificationStatus;
 import com.example.clinic.entity.enums.NotificationType;
@@ -146,7 +147,15 @@ public class NotificationServiceImpl implements NotificationService {
 
     // Lưu Notification (PENDING) → gửi email đồng bộ → cập nhật SENT/FAILED
     private void sendAndPersist(Appointment appt, NotificationType type, String title, String content) {
-        User recipient = appt.getPatient().getUser();
+        Patient patient = appt.getPatient();
+
+        // Người nhận Notification trong hệ thống: chính chủ nếu có, ngược lại là người quản lý hồ sơ
+        User recipient = patient.getUser() != null ? patient.getUser() : patient.getManagedBy();
+
+        if (recipient == null) {
+            log.warn("Không tìm được người nhận thông báo cho appointment id={} — bỏ qua", appt.getId());
+            return;
+        }
 
         Notification notification = Notification.builder()
                 .user(recipient)
@@ -172,6 +181,13 @@ public class NotificationServiceImpl implements NotificationService {
         }
 
         notificationRepository.save(notification);
+
+        // Hồ sơ người thân có contactEmail riêng, khác với email người quản lý → gửi thêm 1 email thô
+        // (không tạo Notification record vì contactEmail không gắn với User thật nào trong hệ thống)
+        if (patient.getUser() == null && patient.getContactEmail() != null
+                && !patient.getContactEmail().equalsIgnoreCase(recipient.getEmail())) {
+            emailService.sendEmail(patient.getContactEmail(), title, content);
+        }
     }
 
 }

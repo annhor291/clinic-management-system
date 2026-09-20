@@ -24,6 +24,10 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
     // Kiểm tra số BHYT đã tồn tại chưa nhưng bỏ qua bệnh nhân hiện tại (dùng khi update)
     boolean existsByInsuranceNumberAndIdNot(String insuranceNumber, Long id);
 
+    long countByManagedByIdAndUserIsNull(Long managedById);
+
+    java.util.List<Patient> findByManagedByIdAndUserIsNull(Long managedById);
+
     // Tìm kiếm bệnh nhân theo tên hoặc số điện thoại, có pagination
     // LOWER() để tìm không phân biệt hoa thường
     @Query("""
