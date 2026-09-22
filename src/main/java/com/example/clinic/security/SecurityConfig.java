@@ -188,6 +188,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/work-schedule/audit-logs/**")
                         .hasAnyRole("ADMIN", "RECEPTIONIST")
 
+                        .requestMatchers("/api/v1/audit-logs/**")
+                        .hasRole("ADMIN")
+
 
                         // Tất cả request còn lại cần xác thực
                         .anyRequest().authenticated()

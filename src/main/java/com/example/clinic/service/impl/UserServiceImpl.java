@@ -5,6 +5,7 @@ import com.example.clinic.dto.response.PageResponse;
 import com.example.clinic.dto.response.UserResponse;
 import com.example.clinic.dto.response.UserStatisticsResponse;
 import com.example.clinic.entity.User;
+import com.example.clinic.entity.enums.AuditActionType;
 import com.example.clinic.entity.enums.AuthProvider;
 import com.example.clinic.entity.enums.Role;
 import com.example.clinic.exception.DuplicateResourceException;
@@ -12,6 +13,7 @@ import com.example.clinic.exception.ResourceNotFoundException;
 import com.example.clinic.mapper.UserMapper;
 import com.example.clinic.repository.UserRepository;
 import com.example.clinic.security.SecurityUtil;
+import com.example.clinic.service.AuditLogService;
 import com.example.clinic.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -34,6 +36,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final AuditLogService auditLogService;
 
     @Override
     @Transactional(readOnly = true)
@@ -117,7 +120,15 @@ public class UserServiceImpl implements UserService {
             throw new IllegalStateException("Không thể tự đổi vai trò của chính mình sang vai trò khác ADMIN");
         }
 
+        Role oldRole = user.getRole();
         user.setRole(request.getRole());
+        User saved = userRepository.save(user);
+
+        auditLogService.record(
+                AuditActionType.USER_ROLE_CHANGED, "USER", saved.getId(),
+                "Đổi vai trò của user '" + saved.getUsername() + "' từ " + oldRole + " sang " + request.getRole(),
+                Map.of("role", oldRole), Map.of("role", request.getRole())
+        );
         return userMapper.toResponse(userRepository.save(user));
     }
 
@@ -161,6 +172,13 @@ public class UserServiceImpl implements UserService {
         }
 
         user.setLocked(true);
+        User saved = userRepository.save(user);
+
+        auditLogService.record(
+                AuditActionType.USER_LOCKED, "USER", saved.getId(),
+                "Khoá tài khoản '" + saved.getUsername() + "' vì lý do bảo mật",
+                null, null
+        );
         return userMapper.toResponse(userRepository.save(user));
     }
 
@@ -174,6 +192,13 @@ public class UserServiceImpl implements UserService {
         }
 
         user.setLocked(false);
+        User saved = userRepository.save(user);
+
+        auditLogService.record(
+                AuditActionType.USER_UNLOCKED, "USER", saved.getId(),
+                "Mở khoá tài khoản '" + saved.getUsername() + "'",
+                null, null
+        );
         return userMapper.toResponse(userRepository.save(user));
     }
 
@@ -183,6 +208,11 @@ public class UserServiceImpl implements UserService {
         User user = findActiveByIdOrThrow(id);
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+        auditLogService.record(
+                AuditActionType.USER_PASSWORD_RESET_BY_ADMIN, "USER", user.getId(),
+                "Admin đặt lại mật khẩu cho tài khoản '" + user.getUsername() + "'",
+                null, null
+        );
     }
 
     @Override
@@ -193,6 +223,12 @@ public class UserServiceImpl implements UserService {
         User user = findActiveByIdOrThrow(id);
         user.setDeletedAt(LocalDateTime.now());
         userRepository.save(user);
+
+        auditLogService.record(
+                AuditActionType.USER_DELETED, "USER", user.getId(),
+                "Xoá (soft-delete) tài khoản '" + user.getUsername() + "'",
+                null, null
+        );
     }
 
     @Override
@@ -241,7 +277,15 @@ public class UserServiceImpl implements UserService {
 
         List<User> users = findAllActiveByIdOrThrow(request.getIds());
         LocalDateTime now = LocalDateTime.now();
-        users.forEach(u -> u.setDeletedAt(now));
+        users.forEach(u -> {
+            u.setDeletedAt(now);
+            auditLogService.record(
+                    AuditActionType.USER_DELETED, "USER", u.getId(),
+                    "Xoá hàng loạt (soft-delete) tài khoản '" + u.getUsername() + "'",
+                    null, null
+            );
+
+        });
         userRepository.saveAll(users);
     }
 
