@@ -3,6 +3,7 @@ package com.example.clinic.controller;
 import com.example.clinic.dto.request.DoctorScheduleRequest;
 import com.example.clinic.dto.response.ApiResponse;
 import com.example.clinic.dto.response.DoctorScheduleResponse;
+import com.example.clinic.dto.response.QueueStatusResponse;
 import com.example.clinic.service.DoctorScheduleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -90,5 +91,13 @@ public class DoctorScheduleController {
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
         scheduleService.delete(id);
         return ResponseEntity.ok(ApiResponse.success("Xoá ca làm việc thành công"));
+    }
+
+    // GET /api/v1/doctor-schedules/{id}/queue-status
+    // Xem trạng thái hàng chờ hiện tại của ca — bệnh nhân/bác sĩ/lễ tân đều xem được
+    @GetMapping("/{id}/queue-status")
+    public ResponseEntity<ApiResponse<QueueStatusResponse>> getQueueStatus(@PathVariable Long id) {
+        QueueStatusResponse status = scheduleService.getQueueStatus(id);
+        return ResponseEntity.ok(ApiResponse.success("Lấy trạng thái hàng chờ thành công", status));
     }
 }

@@ -2,6 +2,7 @@ package com.example.clinic.service;
 
 import com.example.clinic.dto.request.DoctorScheduleRequest;
 import com.example.clinic.dto.response.DoctorScheduleResponse;
+import com.example.clinic.dto.response.QueueStatusResponse;
 import com.example.clinic.entity.enums.ShiftType;
 
 import java.time.LocalDate;
@@ -37,4 +38,7 @@ public interface DoctorScheduleService {
     DoctorScheduleResponse createFromApprovedRegistration(Long doctorId, LocalDate workDate,
                                                           LocalTime startTime, LocalTime endTime,
                                                           ShiftType shiftType);
+    // Lấy trạng thái hàng chờ hiện tại của 1 ca làm việc — dùng để bệnh nhân biết
+    // "đang khám số mấy", và ca có đang bị trễ hay không
+    QueueStatusResponse getQueueStatus(Long scheduleId);
 }

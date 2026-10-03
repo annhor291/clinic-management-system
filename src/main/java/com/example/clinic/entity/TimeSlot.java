@@ -67,6 +67,12 @@ public class TimeSlot {
     @Column(name = "version")
     private Long version;
 
+    // Số thứ tự trong ca làm việc — tính tại thời điểm sinh slot, không đổi dù appointment
+    // gắn vào slot này có bị hủy/đặt lại bởi người khác. Dùng để hiển thị "Số thứ tự dự kiến"
+    // trên phiếu khám điện tử, tương tự cách Medpro/BookingCare đang làm ngoài thực tế.
+    @Column(name = "queue_number")
+    private Integer queueNumber;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

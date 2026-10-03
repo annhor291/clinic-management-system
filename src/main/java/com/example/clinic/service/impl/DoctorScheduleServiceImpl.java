@@ -2,6 +2,7 @@ package com.example.clinic.service.impl;
 
 import com.example.clinic.dto.request.DoctorScheduleRequest;
 import com.example.clinic.dto.response.DoctorScheduleResponse;
+import com.example.clinic.dto.response.QueueStatusResponse;
 import com.example.clinic.entity.Doctor;
 import com.example.clinic.entity.DoctorSchedule;
 import com.example.clinic.entity.TimeSlot;
@@ -9,6 +10,7 @@ import com.example.clinic.entity.enums.ShiftType;
 import com.example.clinic.entity.enums.SlotStatus;
 import com.example.clinic.exception.DuplicateResourceException;
 import com.example.clinic.exception.ResourceNotFoundException;
+import com.example.clinic.repository.AppointmentRepository;
 import com.example.clinic.repository.DoctorRepository;
 import com.example.clinic.repository.DoctorScheduleRepository;
 import com.example.clinic.repository.TimeSlotRepository;
@@ -35,6 +37,7 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
     private final DoctorRepository doctorRepository;
     private final TimeSlotRepository timeSlotRepository;
     private final DoctorScheduleMapper scheduleMapper;
+    private final AppointmentRepository appointmentRepository;
 
     // Tạo ca làm việc và tự động sinh các TimeSlot
     @Override
@@ -154,6 +157,46 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         return scheduleMapper.toResponseWithSlots(schedule);
     }
 
+    // ===== Trạng thái hàng chờ của 1 ca làm việc =====
+    @Override
+    @Transactional(readOnly = true)
+    public QueueStatusResponse getQueueStatus(Long scheduleId) {
+        DoctorSchedule schedule = findByIdOrThrow(scheduleId);
+
+        long finishedCount = appointmentRepository.countFinishedInSchedule(scheduleId);
+        int totalInShift = schedule.getTimeSlots().size();
+
+        Integer currentServingNumber = finishedCount == 0 ? null : (int) finishedCount;
+        // "Đang khám số X" = số slot đã xử lý xong + 1 (slot đang tới lượt), trừ khi đã xong hết ca
+        if (finishedCount > 0 && finishedCount < totalInShift) {
+            currentServingNumber = (int) finishedCount + 1;
+        } else if (finishedCount >= totalInShift && totalInShift > 0) {
+            currentServingNumber = totalInShift; // ca đã khám hết
+        }
+
+        boolean delayed = checkScheduleDelayed(schedule, finishedCount);
+
+        return QueueStatusResponse.builder()
+                .currentServingNumber(currentServingNumber)
+                .totalInShift(totalInShift)
+                .delayed(delayed)
+                .delayMessage(delayed
+                        ? "Ca khám đang trễ hơn dự kiến do các lượt khám trước phát sinh thêm thời gian."
+                        : null)
+                .build();
+    }
+
+    // Ca bị coi là trễ nếu: đã qua giờ bắt đầu của slot tiếp theo cần khám (dựa theo queueNumber),
+    // nhưng slot đó vẫn chưa được xử lý xong (chưa COMPLETED/NO_SHOW)
+    private boolean checkScheduleDelayed(DoctorSchedule schedule, long finishedCount) {
+        return schedule.getTimeSlots().stream()
+                .filter(slot -> slot.getQueueNumber() != null && slot.getQueueNumber() == finishedCount + 1)
+                .anyMatch(slot -> {
+                    LocalDateTime slotStart = LocalDateTime.of(schedule.getWorkDate(), slot.getStartTime());
+                    return LocalDateTime.now().isAfter(slotStart);
+                });
+    }
+
     // Lấy lịch làm việc của bác sĩ trong khoảng ngày
     @Override
     @Transactional(readOnly = true)
@@ -264,7 +307,11 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
 
         LocalDateTime now = LocalDateTime.now();
 
+        int position = 0; // Vị trí thứ mấy trong ca — tăng dần bất kể slot có bị bỏ qua hay không
+
         while (current.plusMinutes(duration).compareTo(endTime) <= 0) {
+
+            position++;
 
             LocalTime slotEnd = current.plusMinutes(duration);
 

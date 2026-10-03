@@ -53,6 +53,17 @@ public class AppointmentResponse {
     private Long rescheduledFromId;
     private String rescheduledFromBookingCode;
 
+    // Phiếu khám điện tử — bổ sung thêm thông tin hiển thị cho bệnh nhân
+    private Integer queueNumber;
+    private String estimatedTimeLabel;
+    private String arrivalNote;
+
+    // Trễ giờ — chỉ có ý nghĩa khi status còn PENDING/CONFIRMED
+    private boolean delayed;
+    private String delayMessage;
+
+    private Long scheduleId;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

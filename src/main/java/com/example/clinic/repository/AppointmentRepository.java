@@ -203,4 +203,13 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
         WHERE a.id = :id
         """)
     Optional<Appointment> findByIdWithPatientAndDoctorUser(@Param("id") Long id);
+
+    // Đếm số appointment đã xử lý xong (COMPLETED/NO_SHOW) trong 1 ca làm việc — dùng để suy ra
+    // "số đang khám hiện tại" = count + 1, không cần lưu trạng thái IN_PROGRESS riêng
+    @Query("""
+        SELECT COUNT(a) FROM Appointment a
+        WHERE a.timeSlot.schedule.id = :scheduleId
+        AND a.status IN ('COMPLETED', 'NO_SHOW')
+        """)
+    long countFinishedInSchedule(@Param("scheduleId") Long scheduleId);
 }
