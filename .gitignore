@@ -34,6 +34,8 @@ build/
 
 # Config (sensitive)
 src/main/resources/application.properties
+# Test Configuration & Overrides
+src/test/resources/application-test.properties
 
 # OS files
 .DS_Store
