@@ -3,6 +3,7 @@ package com.example.clinic.dto.request;
 import com.example.clinic.entity.enums.Gender;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -13,6 +14,7 @@ import java.time.LocalDate;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class ManagedPatientCreateRequest {
 
     @NotBlank(message = "Họ tên không được để trống")

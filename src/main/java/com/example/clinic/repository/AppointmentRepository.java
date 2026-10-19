@@ -197,7 +197,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Query("""
         SELECT a FROM Appointment a
         JOIN FETCH a.patient p
-        JOIN FETCH p.user
+        LEFT JOIN FETCH p.user
+        LEFT JOIN FETCH p.managedBy
         JOIN FETCH a.doctor d
         JOIN FETCH d.user
         WHERE a.id = :id
