@@ -13,6 +13,7 @@ import com.example.clinic.repository.DoctorRepository;
 import com.example.clinic.repository.SpecialtyRepository;
 import com.example.clinic.repository.UserRepository;
 import com.example.clinic.security.SecurityUtil;
+import com.example.clinic.service.DoctorBlockService;
 import com.example.clinic.service.DoctorService;
 import com.example.clinic.mapper.DoctorMapper;
 import lombok.RequiredArgsConstructor;
@@ -20,8 +21,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +35,7 @@ public class DoctorServiceImpl implements DoctorService {
     private final UserRepository userRepository;
     private final SpecialtyRepository specialtyRepository;
     private final DoctorMapper doctorMapper;
+    private final DoctorBlockService doctorBlockService;
 
     // Lấy danh sách bác sĩ có pagination + filter
     @Override
@@ -100,6 +105,19 @@ public class DoctorServiceImpl implements DoctorService {
     public DoctorResponse update(Long id, DoctorUpdateRequest request) {
         Doctor doctor = findByIdOrThrow(id);
 
+        if (SecurityUtil.isDoctor()) {
+            if (!doctor.getUser().getId().equals(SecurityUtil.getCurrentUserId())) {
+                throw new AccessDeniedException("Bạn chỉ có thể cập nhật hồ sơ của chính mình");
+            }
+            boolean feeChanged = request.getConsultationFee() != null
+                    && request.getConsultationFee().compareTo(doctor.getConsultationFee()) != 0;
+            boolean specialtyChanged = request.getSpecialtyId() != null
+                    && !request.getSpecialtyId().equals(doctor.getSpecialty().getId());
+            if (feeChanged || specialtyChanged) {
+                throw new AccessDeniedException("Chỉ admin mới được đổi phí khám và chuyên khoa");
+            }
+        }
+
         doctorMapper.updateEntity(doctor, request);
 
         if (request.getSpecialtyId() != null) {
@@ -115,16 +133,6 @@ public class DoctorServiceImpl implements DoctorService {
 
         Doctor saved = doctorRepository.save(doctor);
         return doctorMapper.toResponse(saved);
-    }
-
-
-
-    // Xoá bác sĩ
-    @Override
-    @Transactional
-    public void delete(Long id) {
-        Doctor doctor = findByIdOrThrow(id);
-        doctorRepository.delete(doctor);
     }
 
     // Kích hoạt bác sĩ
@@ -156,6 +164,8 @@ public class DoctorServiceImpl implements DoctorService {
 
         doctor.setActive(false);
         Doctor saved = doctorRepository.save(doctor);
+        // Ngừng làm việc: hủy toàn bộ lịch tương lai (kèm thông báo + hoàn tiền) và khóa các ca
+        doctorBlockService.blockDoctor(id, LocalDate.now(), null, "Bác sĩ không còn làm việc tại phòng khám");
         return doctorMapper.toResponse(saved);
     }
 

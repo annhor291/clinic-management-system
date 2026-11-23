@@ -34,7 +34,7 @@ public class UserController {
     }
 
     // Đặt trước /{id} — Spring ưu tiên match path literal hơn path variable nên thứ tự không ảnh hưởng,
-    // nhưng để dễ đọc mình đặt /me lên trước
+    // nhưng để dễ đọc đặt /me lên trước
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> getMe() {
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin tài khoản thành công",

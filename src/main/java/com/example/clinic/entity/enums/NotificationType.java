@@ -11,5 +11,7 @@ public enum NotificationType {
     APPOINTMENT_REMINDER_24H, // Nhắc trước 24 giờ (Scheduler)
     APPOINTMENT_REMINDER_1H,  // Nhắc trước 1 giờ  (Scheduler)
     WELCOME,                  // Chào mừng đăng ký
-    GENERAL                   // Thông báo chung từ Admin
+    GENERAL,                  // Thông báo chung từ Admin
+    PAYMENT_SUCCESS,          // Thanh toán thành công
+    PAYMENT_REFUNDED,         // Đã gửi yêu cầu hoàn tiền
 }

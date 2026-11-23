@@ -10,6 +10,7 @@ import com.example.clinic.entity.Patient;
 import com.example.clinic.entity.User;
 import com.example.clinic.exception.DuplicateResourceException;
 import com.example.clinic.exception.ResourceNotFoundException;
+import com.example.clinic.repository.AppointmentRepository;
 import com.example.clinic.repository.PatientRepository;
 import com.example.clinic.repository.UserRepository;
 import com.example.clinic.security.SecurityUtil;
@@ -31,6 +32,7 @@ public class PatientServiceImpl implements PatientService {
     private final UserRepository userRepository;
     private final PatientMapper patientMapper;
     private final BookingProperties bookingProperties;
+    private final AppointmentRepository appointmentRepository;
 
     // Lấy danh sách bệnh nhân có pagination + filter
     @Override
@@ -118,11 +120,19 @@ public class PatientServiceImpl implements PatientService {
         return patientMapper.toResponse(saved);
     }
 
-    // Xoá bệnh nhân
+    // Xoá bệnh nhân(không xóa cứng bệnh nhân đã có lịch hẹn)
     @Override
     @Transactional
     public void delete(Long id) {
         Patient patient = findByIdOrThrow(id);
+        if (appointmentRepository.existsByPatientId(id)) {
+            throw new IllegalStateException("Bệnh nhân đã có lịch hẹn, không thể xóa hồ sơ");
+        }
+        // Cắt liên kết ngược để cascade từ User không "hồi sinh" bản ghi vừa xóa
+        User owner = patient.getUser();
+        if (owner != null) {
+            owner.setPatient(null);
+        }
         patientRepository.delete(patient);
     }
 
@@ -137,6 +147,22 @@ public class PatientServiceImpl implements PatientService {
         } catch (ResourceNotFoundException e) {
             throw new ResourceNotFoundException("Bạn chưa có hồ sơ bệnh nhân");
         }
+    }
+
+    // Bệnh nhân tự tạo hồ sơ của chính mình sau khi đăng ký
+    @Override
+    @Transactional
+    public PatientResponse createMe(PatientCreateRequest request) {
+        return create(SecurityUtil.getCurrentUserId(), request);   // đã kiểm tra trùng hồ sơ và trùng BHYT
+    }
+
+    // Bệnh nhân tự sửa hồ sơ của chính mình
+    @Override
+    @Transactional
+    public PatientResponse updateMe(PatientUpdateRequest request) {
+        Patient patient = patientRepository.findByUserId(SecurityUtil.getCurrentUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Bạn chưa có hồ sơ bệnh nhân"));
+        return update(patient.getId(), request);
     }
 
     @Override

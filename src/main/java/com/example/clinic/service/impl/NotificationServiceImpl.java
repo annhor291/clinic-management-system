@@ -1,23 +1,27 @@
 package com.example.clinic.service.impl;
 
-import com.example.clinic.entity.Appointment;
-import com.example.clinic.entity.Notification;
-import com.example.clinic.entity.Patient;
-import com.example.clinic.entity.User;
+import com.example.clinic.dto.response.NotificationResponse;
+import com.example.clinic.entity.*;
 import com.example.clinic.entity.enums.NotificationStatus;
 import com.example.clinic.entity.enums.NotificationType;
+import com.example.clinic.notification.event.NotificationCreatedEvent;
 import com.example.clinic.exception.ResourceNotFoundException;
 import com.example.clinic.repository.AppointmentRepository;
 import com.example.clinic.repository.NotificationRepository;
+import com.example.clinic.repository.PaymentRepository;
 import com.example.clinic.service.EmailService;
 import com.example.clinic.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 // Chịu trách nhiệm: build nội dung thông báo theo từng loại sự kiện, lưu vào bảng notifications,
 // gửi email đồng bộ (sendEmailSync) và cập nhật đúng trạng thái SENT/FAILED.
@@ -34,6 +38,8 @@ public class NotificationServiceImpl implements NotificationService {
     private final AppointmentRepository appointmentRepository;
     private final NotificationRepository notificationRepository;
     private final EmailService emailService;
+    private final ApplicationEventPublisher eventPublisher;
+    private final PaymentRepository paymentRepository;
 
     @Override
     @Transactional
@@ -62,11 +68,20 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public void notifyAppointmentCancelled(Long appointmentId) {
         Appointment appt = findAppointmentOrThrow(appointmentId);
-        String title = "Lịch hẹn đã bị hủy";
         String reason = appt.getCancellationReason() != null ? appt.getCancellationReason() : "Không rõ lý do";
-        String content = "Lịch hẹn " + appt.getBookingCode() + " với " + doctorLabel(appt) +
-                " vào " + appt.getAppointmentTime().format(DATE_TIME_FORMATTER) +
-                " đã bị hủy. Lý do: " + reason;
+        String base = "Lịch hẹn " + appt.getBookingCode() + " với " + doctorLabel(appt) +
+                " vào " + appt.getAppointmentTime().format(DATE_TIME_FORMATTER);
+
+        String title;
+        String content;
+        if (appt.isCancelledByClinic()) {
+            title = "Phòng khám đã hủy lịch hẹn của bạn";
+            content = "Rất tiếc, " + base + " đã bị phòng khám hủy. Lý do: " + reason +
+                    ". Bạn có muốn hỗ trợ đặt lịch tương tự không? Hãy mở lịch hẹn này để xem các khung giờ gợi ý.";
+        } else {
+            title = "Lịch hẹn đã bị hủy";
+            content = base + " đã bị hủy. Lý do: " + reason;
+        }
         sendAndPersist(appt, NotificationType.APPOINTMENT_CANCELLED, title, content);
     }
 
@@ -103,13 +118,13 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
-    public void notifyAppointmentRescheduled(Long oldAppointmentId, Long newAppointmentId) {
-        Appointment newAppt = findAppointmentOrThrow(newAppointmentId);
+    public void notifyAppointmentRescheduled(Long appointmentId, LocalDateTime oldAppointmentTime) {
+        Appointment appt = findAppointmentOrThrow(appointmentId);
         String title = "Lịch hẹn đã được đổi";
-        String content = "Lịch hẹn của bạn đã được đổi sang " + doctorLabel(newAppt) +
-                " vào " + newAppt.getAppointmentTime().format(DATE_TIME_FORMATTER) +
-                ", mã lịch hẹn mới: " + newAppt.getBookingCode() + ".";
-        sendAndPersist(newAppt, NotificationType.APPOINTMENT_RESCHEDULED, title, content);
+        String content = "Lịch hẹn " + appt.getBookingCode() + " đã được đổi từ " +
+                oldAppointmentTime.format(DATE_TIME_FORMATTER) + " sang " +
+                appt.getAppointmentTime().format(DATE_TIME_FORMATTER) + " với " + doctorLabel(appt) + ".";
+        sendAndPersist(appt, NotificationType.APPOINTMENT_RESCHEDULED, title, content);
     }
 
     @Override
@@ -132,6 +147,32 @@ public class NotificationServiceImpl implements NotificationService {
                 appt.getAppointmentTime().format(DATE_TIME_FORMATTER) +
                 " (còn khoảng 1 giờ nữa). Vui lòng đến đúng giờ.";
         sendAndPersist(appt, NotificationType.APPOINTMENT_REMINDER_1H, title, content);
+    }
+
+    @Override
+    @Transactional
+    public void notifyPaymentSucceeded(Long paymentId) {
+        Payment payment = findPaymentOrThrow(paymentId);
+        Appointment appt = findAppointmentOrThrow(payment.getAppointment().getId());
+        String title = "Thanh toán thành công";
+        String content = "Bạn đã thanh toán " + formatMoney(payment.getAmount()) + " cho lịch hẹn " +
+                appt.getBookingCode() + " với " + doctorLabel(appt) + " vào " +
+                appt.getAppointmentTime().format(DATE_TIME_FORMATTER) +
+                ". Mã giao dịch: " + payment.getTransactionCode() + ".";
+        sendAndPersist(appt, NotificationType.PAYMENT_SUCCESS, title, content);
+    }
+
+    @Override
+    @Transactional
+    public void notifyPaymentRefunded(Long paymentId) {
+        Payment payment = findPaymentOrThrow(paymentId);
+        Appointment appt = findAppointmentOrThrow(payment.getAppointment().getId());
+        String title = "Đã hoàn tiền";
+        String content = "Phòng khám đã gửi yêu cầu hoàn " + formatMoney(payment.getRefundAmount()) +
+                " cho lịch hẹn " + appt.getBookingCode() + " (mã giao dịch " + payment.getTransactionCode() +
+                "). Lý do: " + payment.getRefundReason() +
+                ". Thời gian tiền về tài khoản phụ thuộc vào ngân hàng của bạn.";
+        sendAndPersist(appt, NotificationType.PAYMENT_REFUNDED, title, content);
     }
 
     // ===== Private helpers =====
@@ -182,12 +223,25 @@ public class NotificationServiceImpl implements NotificationService {
 
         notificationRepository.save(notification);
 
+        // Đẩy realtime sau khi commit (NotificationPushListener); gửi email thất bại vẫn có thông báo trong app
+        eventPublisher.publishEvent(
+                new NotificationCreatedEvent(recipient.getId(), NotificationResponse.from(notification)));
+
         // Hồ sơ người thân có contactEmail riêng, khác với email người quản lý → gửi thêm 1 email thô
         // (không tạo Notification record vì contactEmail không gắn với User thật nào trong hệ thống)
         if (patient.getUser() == null && patient.getContactEmail() != null
                 && !patient.getContactEmail().equalsIgnoreCase(recipient.getEmail())) {
             emailService.sendEmail(patient.getContactEmail(), title, content);
         }
+    }
+
+    private Payment findPaymentOrThrow(Long id) {
+        return paymentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giao dịch với id: " + id));
+    }
+
+    private String formatMoney(BigDecimal amount) {
+        return NumberFormat.getInstance(Locale.of("vi", "VN")).format(amount) + " VND";
     }
 
 }

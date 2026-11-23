@@ -2,16 +2,21 @@ package com.example.clinic.mapper;
 
 import com.example.clinic.dto.response.AppointmentResponse;
 import com.example.clinic.entity.Appointment;
+import com.example.clinic.entity.Payment;
 import com.example.clinic.entity.enums.AppointmentStatus;
+import com.example.clinic.repository.PaymentRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 @Component
+@RequiredArgsConstructor
 public class AppointmentMapper {
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+    private final PaymentRepository paymentRepository;
 
     // Convert Appointment entity → AppointmentResponse
     public AppointmentResponse toResponse(Appointment appointment) {
@@ -39,6 +44,7 @@ public class AppointmentMapper {
                 .cancellationReason(appointment.getCancellationReason())
                 .cancelledAt(appointment.getCancelledAt())
                 .cancelledBy(appointment.getCancelledBy())
+                .cancelledByClinic(appointment.isCancelledByClinic())
                 .createdAt(appointment.getCreatedAt())
                 .updatedAt(appointment.getUpdatedAt())
                 // Phiếu khám điện tử
@@ -47,7 +53,10 @@ public class AppointmentMapper {
                 .arrivalNote("Vui lòng đến trước giờ hẹn 15-20 phút để làm thủ tục tiếp nhận.")
                 .delayed(isDelayed(appointment))
                 .delayMessage(buildDelayMessage(appointment))
-                .scheduleId(appointment.getTimeSlot().getSchedule().getId());
+                .scheduleId(appointment.getTimeSlot().getSchedule().getId())
+                .paymentStatus(paymentRepository
+                        .findFirstByAppointmentIdOrderByCreatedAtDescIdDesc(appointment.getId())
+                        .map(Payment::getStatus).orElse(null));
 
         // Nếu là lịch đổi → lấy thêm thông tin lịch cũ
         if (appointment.getRescheduledFrom() != null) {

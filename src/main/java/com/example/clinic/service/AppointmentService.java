@@ -58,5 +58,6 @@ public interface AppointmentService {
     // Khác với cancel() công khai: KHÔNG áp CancelWindow rule (vì đây là hệ thống/admin xử lý
     // tình huống hợp lệ, không phải người dùng tự ý hủy sát giờ). Chỉ dùng nội bộ bởi
     // DoctorLeaveRequestService khi duyệt đơn nghỉ.
-    AppointmentResponse cancelDueToDoctorLeave(Long id, String reason);
+    // Phòng khám chủ động hủy (bác sĩ nghỉ, ngừng làm việc...). Không áp quy tắc "hủy trước X giờ"; slot bị khóa.
+    AppointmentResponse cancelByClinic(Long id, String reason);
 }

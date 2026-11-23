@@ -21,9 +21,6 @@ public interface DoctorService {
     // Cập nhật thông tin bác sĩ
     DoctorResponse update(Long id, DoctorUpdateRequest request);
 
-    // Xoá bác sĩ
-    void delete(Long id);
-
     // Kích hoạt bác sĩ
     DoctorResponse activate(Long id);
 

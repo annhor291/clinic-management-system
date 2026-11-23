@@ -69,9 +69,6 @@ public class DoctorMapper {
         if (request.getConsultationFee() != null) {
             doctor.setConsultationFee(request.getConsultationFee());
         }
-        if (request.getActive() != null) {
-            doctor.setActive(request.getActive());
-        }
         // specialty được Service xử lý riêng vì cần query DB
         // updated_at tự động cập nhật bởi @PreUpdate trong Entity
     }

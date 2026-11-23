@@ -39,7 +39,18 @@ public class AuditLogServiceImpl  implements AuditLogService {
                        String description, Object before, Object after) {
         User actor = userRepository.findById(SecurityUtil.getCurrentUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản hiện tại"));
+        save(actor, actionType, targetEntityType, targetEntityId, description, before, after);
+    }
 
+    @Override
+    @Transactional
+    public void recordSystem(AuditActionType actionType, String targetEntityType, Long targetEntityId,
+                             String description, Object before, Object after) {
+        save(null, actionType, targetEntityType, targetEntityId, description, before, after);
+    }
+
+    private void save(User actor, AuditActionType actionType, String targetEntityType, Long targetEntityId,
+                      String description, Object before, Object after) {
         String safeDescription = description != null && description.length() > MAX_DESCRIPTION_LENGTH
                 ? description.substring(0, MAX_DESCRIPTION_LENGTH)
                 : description;

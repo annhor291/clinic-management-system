@@ -2,6 +2,7 @@ package com.example.clinic.dto.response;
 
 import com.example.clinic.entity.enums.AppointmentStatus;
 import com.example.clinic.entity.enums.CancelledBy;
+import com.example.clinic.entity.enums.PaymentStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -63,6 +64,11 @@ public class AppointmentResponse {
     private String delayMessage;
 
     private Long scheduleId;
+
+    // Trạng thái giao dịch mới nhất của lịch hẹn; null = chưa có giao dịch nào
+    private PaymentStatus paymentStatus;
+
+    private boolean cancelledByClinic;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

@@ -11,10 +11,7 @@ import com.example.clinic.exception.ResourceNotFoundException;
 import com.example.clinic.mapper.DoctorLeaveRequestMapper;
 import com.example.clinic.repository.*;
 import com.example.clinic.security.SecurityUtil;
-import com.example.clinic.service.AppointmentService;
-import com.example.clinic.service.DoctorLeaveRequestService;
-import com.example.clinic.service.DoctorScheduleService;
-import com.example.clinic.service.WorkScheduleAuditLogService;
+import com.example.clinic.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -26,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -37,10 +33,7 @@ public class DoctorLeaveRequestServiceImpl implements DoctorLeaveRequestService 
     private final DoctorRepository doctorRepository;
     private final UserRepository userRepository;
     private final DoctorLeaveRequestMapper mapper;
-    private final TimeSlotRepository timeSlotRepository;
-    private final AppointmentRepository appointmentRepository;
-    private final AppointmentService appointmentService;
-    private final DoctorScheduleService doctorScheduleService;
+    private final DoctorBlockService doctorBlockService;
     private final WorkScheduleAuditLogService auditLogService;
 
     @Override
@@ -136,7 +129,9 @@ public class DoctorLeaveRequestServiceImpl implements DoctorLeaveRequestService 
 
         User currentUser = getCurrentUserOrThrow();
 
-        int cancelledCount = applyLeaveToActualSchedule(leaveRequest);
+        int cancelledCount = doctorBlockService.blockDoctor(
+                leaveRequest.getDoctor().getId(), leaveRequest.getStartDate(), leaveRequest.getEndDate(),
+                buildCancelReason(leaveRequest));
 
         leaveRequest.setStatus(LeaveStatus.APPROVED);
         leaveRequest.setDecidedBy(currentUser);
@@ -236,32 +231,6 @@ public class DoctorLeaveRequestServiceImpl implements DoctorLeaveRequestService 
         }
     }
 
-    private int applyLeaveToActualSchedule(DoctorLeaveRequest leaveRequest) {
-        Long doctorId = leaveRequest.getDoctor().getId();
-        List<DoctorSchedule> schedules = scheduleRepository.findByDoctorIdAndDateRange(
-                doctorId, leaveRequest.getStartDate(), leaveRequest.getEndDate());
-
-        String cancelReason = buildCancelReason(leaveRequest);
-        int cancelledCount = 0;
-
-        for (DoctorSchedule schedule : schedules) {
-            List<TimeSlot> slots = timeSlotRepository.findByScheduleId(schedule.getId());
-
-            for (TimeSlot slot : slots) {
-                if (slot.getStatus() == SlotStatus.BOOKED) {
-                    Optional<Appointment> appt = appointmentRepository.findByTimeSlotIdAndStatusIn(
-                            slot.getId(), List.of(AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED));
-                    if (appt.isPresent()) {
-                        appointmentService.cancelDueToDoctorLeave(appt.get().getId(), cancelReason);
-                        cancelledCount++;
-                    }
-                }
-            }
-
-            doctorScheduleService.deactivate(schedule.getId());
-        }
-        return cancelledCount;
-    }
 
     private String buildCancelReason(DoctorLeaveRequest leaveRequest) {
         String typeLabel = leaveRequest.getType() == LeaveType.PLANNED ? "nghỉ phép" : "nghỉ đột xuất";

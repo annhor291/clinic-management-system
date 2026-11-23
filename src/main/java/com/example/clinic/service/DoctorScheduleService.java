@@ -41,4 +41,6 @@ public interface DoctorScheduleService {
     // Lấy trạng thái hàng chờ hiện tại của 1 ca làm việc — dùng để bệnh nhân biết
     // "đang khám số mấy", và ca có đang bị trễ hay không
     QueueStatusResponse getQueueStatus(Long scheduleId);
+
+    DoctorScheduleResponse blockSchedule(Long id);
 }

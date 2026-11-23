@@ -62,8 +62,18 @@ public class SecurityConfig {
                                 "/api/v1/auth/google",
                                 "/api/v1/auth/refresh",
                                 "/api/v1/auth/forgot-password",
-                                "/api/v1/auth/reset-password"
+                                "/api/v1/auth/reset-password",
+                                "/api/v1/auth/reset-password",
+                                "/ws/**",          // handshake WebSocket; JWT được kiểm tra ở frame STOMP CONNECT
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/api/v1/clinic"
                         ).permitAll()
+
+                        // Gợi ý chuyên khoa theo triệu chứng: công khai (người chưa có tài khoản, token hết hạn vẫn dùng được).
+                        // Chỉ khi gửi kèm patientId thì service mới đòi đăng nhập và kiểm tra quyền sở hữu hồ sơ.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/triage/next").permitAll()
 
                         .requestMatchers("/api/v1/auth/change-password").authenticated()
                         .requestMatchers("/api/v1/auth/logout").authenticated()
@@ -78,6 +88,12 @@ public class SecurityConfig {
 
                         // Bệnh nhân xem hồ sơ của chính mình
                         .requestMatchers(HttpMethod.GET, "/api/v1/patients/me")
+                        .hasRole("PATIENT")
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/patients/me")
+                        .hasRole("PATIENT")
+
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/patients/me")
                         .hasRole("PATIENT")
 
                         // Quản lý hồ sơ người thân — bất kỳ ai đã đăng nhập đều được dùng (không giới hạn role)
@@ -120,6 +136,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/doctors/**")
                         .hasRole("ADMIN")
 
+                        // Kích hoạt / vô hiệu hoá bác sĩ: chỉ ADMIN (vô hiệu hoá sẽ hủy toàn bộ lịch hẹn tương lai)
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/doctors/*/active", "/api/v1/doctors/*/deactive")
+                        .hasRole("ADMIN")
+
                         .requestMatchers(HttpMethod.PUT, "/api/v1/doctors/**")
                         .hasAnyRole("ADMIN", "DOCTOR")
 
@@ -139,9 +159,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/doctor-schedules/**")
                         .hasAnyRole("ADMIN", "RECEPTIONIST", "DOCTOR", "PATIENT")
 
-                        // Quản lý lịch làm việc
+                        // Tạo / bật / tắt / xóa ca: chỉ ADMIN. Bác sĩ đi qua đăng ký tuần và đơn nghỉ được duyệt
                         .requestMatchers("/api/v1/doctor-schedules/**")
-                        .hasAnyRole("ADMIN", "RECEPTIONIST", "DOCTOR")
+                        .hasRole("ADMIN")
 
                         .requestMatchers(HttpMethod.POST, "/api/v1/work-schedule/registrations")
                         .hasRole("DOCTOR")
@@ -191,6 +211,18 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/audit-logs/**")
                         .hasRole("ADMIN")
 
+                        .requestMatchers(HttpMethod.POST, "/api/v1/payments/*/refund")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay-ipn").permitAll()
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/**")
+                        .hasAnyRole("PATIENT", "ADMIN", "RECEPTIONIST")
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/payments")
+                        .hasAnyRole("PATIENT", "ADMIN", "RECEPTIONIST")
+
+                        .requestMatchers("/api/v1/notifications/**").authenticated()
 
                         // Tất cả request còn lại cần xác thực
                         .anyRequest().authenticated()

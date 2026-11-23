@@ -1,16 +1,11 @@
 package com.example.clinic.booking.event;
 
-// Sự kiện riêng cho reschedule — mang cả id lịch cũ và lịch mới.
-// Cố tình KHÔNG bắn thêm AppointmentCancelledEvent + AppointmentBookedEvent khi reschedule,
-// vì về nghiệp vụ đây là 1 hành động duy nhất ("đổi lịch"), không phải 2 hành động độc lập.
-// Listener phía Notification sau này chỉ cần gửi 1 thông báo "Lịch của bạn đã được đổi",
-// tránh gây hiểu nhầm nếu bắn riêng 2 thông báo huỷ + đặt mới.
-public record AppointmentRescheduledEvent(Long oldAppointmentId,
-                                          Long newAppointmentId) implements AppointmentEvent {
+import java.time.LocalDateTime;
 
-    @Override
-    public Long appointmentId() {
-        return newAppointmentId;
-    }
+// Đổi lịch trực tiếp: vẫn là cùng một lịch hẹn, chỉ đổi slot (có thể đổi bác sĩ).
+// feeChanged = true khi phí khám của bác sĩ mới khác bác sĩ cũ (giao dịch đang chờ thanh toán phải hủy).
+public record AppointmentRescheduledEvent(Long appointmentId,
+                                          LocalDateTime oldAppointmentTime,
+                                          boolean feeChanged) implements AppointmentEvent {
 
 }

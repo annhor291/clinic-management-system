@@ -33,4 +33,7 @@ public interface PatientService {
 
     // Xem danh sách hồ sơ người thân do tài khoản đang đăng nhập quản lý
     java.util.List<PatientResponse> getMyManagedPatients();
+
+    PatientResponse createMe(PatientCreateRequest request);
+    PatientResponse updateMe(PatientUpdateRequest request);
 }

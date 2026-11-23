@@ -166,7 +166,7 @@ public class DoctorWeeklyRegistrationServiceImpl implements DoctorWeeklyRegistra
 
         User currentUser = getCurrentUserOrThrow();
 
-        int generatedCount = generateActualSchedule(registration);
+        GenerationResult result = generateActualSchedule(registration);
 
         registration.setStatus(RegistrationStatus.APPROVED);
         registration.setDecidedBy(currentUser);
@@ -177,7 +177,8 @@ public class DoctorWeeklyRegistrationServiceImpl implements DoctorWeeklyRegistra
         auditLogService.record(
                 registration.getDoctor().getId(),
                 WorkScheduleActionType.REGISTRATION_APPROVED,
-                "Duyệt đăng ký tuần " + registration.getWeekStartDate() + ", sinh " + generatedCount + " ca làm việc",
+                "Duyệt đăng ký tuần " + registration.getWeekStartDate() + ", sinh " + result.generated()
+                        + " ca làm việc",
                 "REGISTRATION",
                 registration.getId()
         );
@@ -299,28 +300,39 @@ public class DoctorWeeklyRegistrationServiceImpl implements DoctorWeeklyRegistra
         }
     }
 
+    private record GenerationResult(int generated, List<LocalDate> skippedDates) {}
+
     // Duyệt tuần → chuyển từng DoctorWeeklyRegistrationDay thành DoctorSchedule + TimeSlot thực tế.
     // FULL tách thành 2 ca riêng (sáng + chiều) để tránh sinh nhầm slot vào giờ nghỉ trưa.
     // Trả về số DoctorSchedule đã sinh — dùng để ghi chi tiết vào WorkScheduleAuditLog
-    private int generateActualSchedule(DoctorWeeklyRegistration registration) {
+
+    private GenerationResult generateActualSchedule(DoctorWeeklyRegistration registration) {
         Long doctorId = registration.getDoctor().getId();
         LocalDate weekStart = registration.getWeekStartDate();
+
+        List<DoctorLeaveRequest> approvedLeaves =
+                leaveRequestRepository.findApprovedOverlapping(doctorId, weekStart, weekStart.plusDays(6));
+        List<LocalDate> skipped = new ArrayList<>();
         int count = 0;
 
         for (DoctorWeeklyRegistrationDay day : registration.getDays()) {
             LocalDate concreteDate = weekStart.plusDays(day.getDayOfWeek().getValue() - DayOfWeek.MONDAY.getValue());
-            ShiftType shift = day.getShiftType();
 
+            // Ngày đã có nghỉ được duyệt thì không sinh ca
+            if (isOnApprovedLeave(approvedLeaves, concreteDate)) {
+                skipped.add(concreteDate);
+                continue;
+            }
+
+            ShiftType shift = day.getShiftType();
             if (shift == ShiftType.MORNING) {
                 doctorScheduleService.createFromApprovedRegistration(
                         doctorId, concreteDate, MORNING_START, MORNING_END, ShiftType.MORNING);
                 count++;
-
             } else if (shift == ShiftType.AFTERNOON) {
                 doctorScheduleService.createFromApprovedRegistration(
                         doctorId, concreteDate, AFTERNOON_START, AFTERNOON_END, ShiftType.AFTERNOON);
                 count++;
-
             } else if (shift == ShiftType.FULL) {
                 doctorScheduleService.createFromApprovedRegistration(
                         doctorId, concreteDate, MORNING_START, MORNING_END, ShiftType.MORNING);
@@ -329,6 +341,10 @@ public class DoctorWeeklyRegistrationServiceImpl implements DoctorWeeklyRegistra
                 count += 2;
             }
         }
-        return count;
+        return new GenerationResult(count, skipped);
+    }
+
+    private boolean isOnApprovedLeave(List<DoctorLeaveRequest> leaves, LocalDate date) {
+        return leaves.stream().anyMatch(l -> !date.isBefore(l.getStartDate()) && !date.isAfter(l.getEndDate()));
     }
 }

@@ -36,7 +36,5 @@ public class DoctorUpdateRequest {
     @Min(value = 0, message = "Phí khám không được âm")
     private BigDecimal consultationFee;
 
-    // active nullable — chỉ update khi có giá trị
-    private Boolean active;
 
 }

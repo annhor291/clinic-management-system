@@ -16,15 +16,9 @@ import com.example.clinic.entity.Appointment;
 import com.example.clinic.entity.Doctor;
 import com.example.clinic.entity.Patient;
 import com.example.clinic.entity.TimeSlot;
-import com.example.clinic.entity.enums.AppointmentStatus;
-import com.example.clinic.entity.enums.CancelledBy;
-import com.example.clinic.entity.enums.Role;
-import com.example.clinic.entity.enums.SlotStatus;
+import com.example.clinic.entity.enums.*;
 import com.example.clinic.exception.ResourceNotFoundException;
-import com.example.clinic.repository.AppointmentRepository;
-import com.example.clinic.repository.DoctorRepository;
-import com.example.clinic.repository.PatientRepository;
-import com.example.clinic.repository.TimeSlotRepository;
+import com.example.clinic.repository.*;
 import com.example.clinic.security.SecurityUtil;
 import com.example.clinic.service.AppointmentService;
 import com.example.clinic.mapper.AppointmentMapper;
@@ -39,6 +33,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -59,6 +55,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final PatientAvailabilityGateway patientAvailabilityGateway;
     private final BookingProperties bookingProperties;
     private final ApplicationEventPublisher eventPublisher;
+    private final PaymentRepository paymentRepository;
 
 
     // ===== ĐẶT LỊCH KHÁM =====
@@ -315,15 +312,18 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional(readOnly = true)
     public List<Long> findExpirablePendingIds() {
-        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(bookingProperties.getPendingExpiryMinutes());
-        return appointmentRepository.findExpirablePendingIds(cutoff);
+        LocalDateTime now = LocalDateTime.now();
+        return appointmentRepository.findExpirablePendingIds(
+                now.minusHours(bookingProperties.getConfirmMaxHours()),
+                now.plusMinutes(bookingProperties.getConfirmBeforeStartMinutes()));
     }
 
     // ===== CHUYỂN 1 LỊCH HẸN SANG EXPIRED =====
     @Override
     @Transactional
     public void expireOne(Long appointmentId) {
-        Appointment appointment = appointmentRepository.findById(appointmentId).orElse(null);
+        // Khoá dòng lịch hẹn: tuần tự hoá với tạo/xử lý thanh toán (cùng thứ tự khoá appointment → payment)
+        Appointment appointment = appointmentRepository.findByIdForUpdate(appointmentId).orElse(null);
         if (appointment == null) {
             return; // đã bị xử lý ở nơi khác, bỏ qua
         }
@@ -333,10 +333,15 @@ public class AppointmentServiceImpl implements AppointmentService {
             return;
         }
 
+        // Quy tắc A: khách đang trong phiên thanh toán còn hạn thì chưa thu hồi lịch.
+        // Khi giao dịch hết hạn (PaymentExpiryScheduler) lịch sẽ được expire ở lượt quét sau.
+        if (paymentRepository.existsByAppointmentIdAndStatusAndExpiredAtAfter(
+                appointmentId, PaymentStatus.PENDING, LocalDateTime.now())) {
+            return;
+        }
+
         appointment.setStatus(AppointmentStatus.EXPIRED);
         appointment.setExpiredAt(LocalDateTime.now());
-        // @Version trên Appointment sẽ tự ném OptimisticLockingFailureException
-        // nếu appointment này vừa bị confirm/cancel bởi transaction khác ngay trước khi save
         appointmentRepository.save(appointment);
 
         TimeSlot slot = appointment.getTimeSlot();
@@ -344,6 +349,8 @@ public class AppointmentServiceImpl implements AppointmentService {
             slot.setStatus(SlotStatus.AVAILABLE);
             timeSlotRepository.save(slot);
         }
+
+        eventPublisher.publishEvent(new AppointmentExpiredEvent(appointmentId));
     }
 
     // ===== HỦY LỊCH HẸN =====
@@ -351,8 +358,6 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Transactional
     public AppointmentResponse cancel(Long id, CancelRequest request) {
         Appointment appointment = findByIdOrThrow(id);
-
-        // Lấy cancelledBy từ SecurityContext, KHÔNG từ client
         CancelledBy cancelledBy = validateCancelPermission(appointment);
 
         if (appointment.getStatus() != AppointmentStatus.PENDING &&
@@ -360,9 +365,13 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new IllegalStateException("Không thể hủy lịch hẹn ở trạng thái hiện tại");
         }
 
-        // Chỉ áp giới hạn thời gian tối thiểu khi lịch đã CONFIRMED —
-        // lịch PENDING chưa được xác nhận nên hủy ngay lập tức không ảnh hưởng ai
-        if (appointment.getStatus() == AppointmentStatus.CONFIRMED) {
+        // Phía bệnh nhân: chính họ hủy, hoặc admin/lễ tân hủy giúp theo yêu cầu của họ
+        boolean onBehalf = request.isOnBehalfOfPatient()
+                && (cancelledBy == CancelledBy.ADMIN || cancelledBy == CancelledBy.RECEPTIONIST);
+        boolean patientSide = cancelledBy == CancelledBy.PATIENT || onBehalf;
+
+        // Giới hạn "hủy trước X giờ" chỉ áp cho hủy từ phía bệnh nhân và lịch đã CONFIRMED
+        if (patientSide && appointment.getStatus() == AppointmentStatus.CONFIRMED) {
             LocalDateTime latestAllowed = appointment.getAppointmentTime()
                     .minusHours(bookingProperties.getCancelWindowHours());
             if (LocalDateTime.now().isAfter(latestAllowed)) {
@@ -371,53 +380,44 @@ public class AppointmentServiceImpl implements AppointmentService {
             }
         }
 
-        appointment.setStatus(AppointmentStatus.CANCELLED);
-        appointment.setCancellationReason(request.getReason());
-        appointment.setCancelledAt(LocalDateTime.now());
-        appointment.setCancelledBy(cancelledBy);
-
-        TimeSlot slot = appointment.getTimeSlot();
-        slot.setStatus(SlotStatus.AVAILABLE);
-        timeSlotRepository.save(slot);
-
-        Appointment saved = appointmentRepository.save(appointment);
-        eventPublisher.publishEvent(new AppointmentCancelledEvent(saved.getId()));
-
-        return appointmentMapper.toResponse(saved);
-
+        return applyCancellation(appointment, request.getReason(), cancelledBy, !patientSide);
     }
+
 
     // ===== HỦY LỊCH HẸN DO BÁC SĨ NGHỈ (nội bộ, không qua CancelWindow) =====
     @Override
     @Transactional
-    public AppointmentResponse cancelDueToDoctorLeave(Long id, String reason) {
+    public AppointmentResponse cancelByClinic(Long id, String reason) {
         Appointment appointment = findByIdOrThrow(id);
-
         if (appointment.getStatus() != AppointmentStatus.PENDING &&
                 appointment.getStatus() != AppointmentStatus.CONFIRMED) {
             throw new IllegalStateException("Không thể hủy lịch hẹn ở trạng thái hiện tại");
         }
+        return applyCancellation(appointment, reason, getCancelledByFromContext(), true);
+    }
 
-        // Cố tình BỎ QUA CancelWindow rule — bác sĩ nghỉ đột xuất có thể xảy ra bất kỳ lúc nào,
-        // kể cả trong vòng 2 giờ tới, không nên bị chặn bởi rule dành cho người dùng tự huỷ.
-
+    // Chung cho mọi kiểu hủy. Hủy từ phía phòng khám thì KHÓA slot (không cho đặt lại),
+// hủy từ phía bệnh nhân thì mở lại slot.
+    private AppointmentResponse applyCancellation(Appointment appointment, String reason,
+                                                  CancelledBy by, boolean clinicInitiated) {
         appointment.setStatus(AppointmentStatus.CANCELLED);
         appointment.setCancellationReason(reason);
         appointment.setCancelledAt(LocalDateTime.now());
-        appointment.setCancelledBy(getCancelledByFromContext());
+        appointment.setCancelledBy(by);
+        appointment.setCancelledByClinic(clinicInitiated);
 
         TimeSlot slot = appointment.getTimeSlot();
-        slot.setStatus(SlotStatus.AVAILABLE);
+        slot.setStatus(clinicInitiated ? SlotStatus.BLOCKED : SlotStatus.AVAILABLE);
         timeSlotRepository.save(slot);
 
         Appointment saved = appointmentRepository.save(appointment);
         eventPublisher.publishEvent(new AppointmentCancelledEvent(saved.getId()));
-
         return appointmentMapper.toResponse(saved);
     }
 
     // ===== ĐỔI LỊCH HẸN =====
-    @Override
+
+    /*@Override
     @Transactional
     public AppointmentResponse reschedule(Long id, RescheduleRequest request) {
         Appointment oldAppointment = findByIdOrThrow(id);
@@ -509,6 +509,103 @@ public class AppointmentServiceImpl implements AppointmentService {
         eventPublisher.publishEvent(new AppointmentRescheduledEvent(oldAppointment.getId(), saved.getId()));
 
         return appointmentMapper.toResponse(saved);
+    }*/
+
+    @Override
+    @Transactional
+    public AppointmentResponse reschedule(Long id, RescheduleRequest request) {
+        // Khoá lịch hẹn trước rồi mới tới slot (cùng thứ tự với expireOne và luồng thanh toán)
+        Appointment appointment = appointmentRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy lịch hẹn với id: " + id));
+
+        if (!SecurityUtil.isAdminOrReceptionist()) {
+            if (!SecurityUtil.isPatient()) {
+                throw new AccessDeniedException("Bạn không có quyền đổi lịch hẹn này");
+            }
+            if (!appointment.getPatient().isOwnedByUser(SecurityUtil.getCurrentUserId())) {
+                throw new AccessDeniedException("Bạn chỉ có thể đổi lịch hẹn của chính mình hoặc người thân đang quản lý");
+            }
+        }
+
+        if (appointment.getStatus() != AppointmentStatus.PENDING &&
+                appointment.getStatus() != AppointmentStatus.CONFIRMED) {
+            throw new IllegalStateException("Không thể đổi lịch hẹn ở trạng thái hiện tại");
+        }
+
+        if (appointment.getStatus() == AppointmentStatus.CONFIRMED) {
+            LocalDateTime latestAllowed = appointment.getAppointmentTime()
+                    .minusHours(bookingProperties.getRescheduleWindowHours());
+            if (LocalDateTime.now().isAfter(latestAllowed)) {
+                throw new IllegalStateException(
+                        "Phải đổi lịch trước ít nhất " + bookingProperties.getRescheduleWindowHours() + " giờ so với giờ hẹn");
+            }
+        }
+
+        Long oldSlotId = appointment.getTimeSlot().getId();
+        Long newSlotId = request.getNewTimeSlotId();
+        if (oldSlotId.equals(newSlotId)) {
+            throw new IllegalStateException("Lịch hẹn đang ở đúng khung giờ này");
+        }
+
+        // Khoá cả hai slot theo thứ tự id tăng dần để hai lượt đổi chéo nhau không deadlock
+        TimeSlot low = doctorAvailabilityGateway.lockSlot(Math.min(oldSlotId, newSlotId));
+        TimeSlot high = doctorAvailabilityGateway.lockSlot(Math.max(oldSlotId, newSlotId));
+        TimeSlot oldSlot = oldSlotId < newSlotId ? low : high;
+        TimeSlot newSlot = oldSlotId < newSlotId ? high : low;
+
+        // Quy tắc phí: đã thanh toán thì chỉ đổi trực tiếp khi phí mới đúng bằng khoản đã trả
+        BigDecimal oldFee = normalizeFee(appointment.getDoctor().getConsultationFee());
+        BigDecimal newFee = normalizeFee(newSlot.getDoctor().getConsultationFee());
+        paymentRepository.findFirstByAppointmentIdAndStatus(id, PaymentStatus.SUCCESS).ifPresent(paid -> {
+            if (paid.getAmount().compareTo(newFee) != 0) {
+                throw new IllegalStateException("Lịch hẹn đã thanh toán " + paid.getAmount().toPlainString()
+                        + "đ, còn phí của bác sĩ mới là " + newFee.toPlainString()
+                        + "đ nên không thể đổi trực tiếp. Vui lòng hủy lịch này (hoàn 100%) rồi đặt lịch mới.");
+            }
+        });
+
+        // Chạy lại toàn bộ Rule Engine như lúc book(), loại trừ chính lịch hẹn này
+        boolean hasConflict = doctorAvailabilityGateway.hasConflictingAppointment(newSlotId);
+        PatientScheduleCheckResult scheduleCheck = patientAvailabilityGateway.check(
+                appointment.getPatient().getId(), newSlot.getSlotDate(),
+                newSlot.getStartTime(), newSlot.getEndTime(), appointment.getId());
+
+        bookingRuleEngine.validate(new BookingContext(
+                newSlot.getDoctor().getId(),
+                appointment.getPatient().getId(),
+                newSlot.getSlotDate(),
+                newSlot.getStartTime(),
+                newSlot.getEndTime(),
+                appointment.getId(),
+                LocalDateTime.now(),
+                newSlot.getStatus(),
+                hasConflict,
+                scheduleCheck.hasOverlap(),
+                scheduleCheck.hasBufferViolation()));
+
+        LocalDateTime oldTime = appointment.getAppointmentTime();
+
+        // Mở lại slot cũ (nếu ca của nó còn hoạt động), giữ slot mới
+        oldSlot.setStatus(oldSlot.getSchedule().isActive() ? SlotStatus.AVAILABLE : SlotStatus.BLOCKED);
+        newSlot.setStatus(SlotStatus.BOOKED);
+        timeSlotRepository.saveAll(List.of(oldSlot, newSlot));
+
+        // Cùng một lịch hẹn: giữ nguyên id, mã, trạng thái và thanh toán; chỉ chuyển slot
+        appointment.setTimeSlot(newSlot);
+        appointment.setDoctor(newSlot.getDoctor());
+        appointment.setAppointmentTime(LocalDateTime.of(newSlot.getSlotDate(), newSlot.getStartTime()));
+        appointment.setReminder24hSent(false);
+        appointment.setReminder1hSent(false);
+        Appointment saved = appointmentRepository.save(appointment);
+
+        eventPublisher.publishEvent(new AppointmentRescheduledEvent(
+                saved.getId(), oldTime, oldFee.compareTo(newFee) != 0));
+
+        return appointmentMapper.toResponse(saved);
+    }
+
+    private BigDecimal normalizeFee(BigDecimal fee) {
+        return fee == null ? BigDecimal.ZERO : fee.setScale(0, RoundingMode.HALF_UP);
     }
 
     // ===== Private helpers =====

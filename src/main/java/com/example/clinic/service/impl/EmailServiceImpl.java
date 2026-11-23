@@ -28,21 +28,7 @@ public class EmailServiceImpl implements EmailService {
     @Async
     @Override
     public void sendEmail(String to, String subject, String body) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail, fromName);
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(body, true); // true = HTML
-
-            mailSender.send(message);
-            log.info("Đã gửi email tới {}", to);
-
-        } catch (Exception e) {
-            log.error("Gửi email thất bại tới {}: {}", to, e.getMessage());
-        }
+        sendEmailSync(to, subject, body); // sendEmailSync đã tự log thành công/thất bại
     }
 
     @Async
@@ -99,11 +85,11 @@ public class EmailServiceImpl implements EmailService {
             helper.setText(body, true);
 
             mailSender.send(message);
-            log.info("Đã gửi email (sync) tới {}", to);
+            log.info("Đã gửi email tới {}", to);
             return true;
 
         } catch (Exception e) {
-            log.error("Gửi email (sync) thất bại tới {}: {}", to, e.getMessage());
+            log.error("Gửi email (sync) thất bại tới {}", to, e);
             return false;
         }
     }

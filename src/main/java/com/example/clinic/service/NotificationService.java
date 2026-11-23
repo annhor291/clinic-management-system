@@ -1,5 +1,7 @@
 package com.example.clinic.service;
 
+import java.time.LocalDateTime;
+
 public interface NotificationService {
 
     void notifyAppointmentBooked(Long appointmentId);
@@ -14,9 +16,13 @@ public interface NotificationService {
 
     void notifyAppointmentExpired(Long appointmentId);
 
-    void notifyAppointmentRescheduled(Long oldAppointmentId, Long newAppointmentId);
+    void notifyAppointmentRescheduled(Long appointmentId, LocalDateTime oldAppointmentTime);
 
     void notifyAppointmentReminder24h(Long appointmentId);
 
     void notifyAppointmentReminder1h(Long appointmentId);
+
+    void notifyPaymentSucceeded(Long paymentId);
+
+    void notifyPaymentRefunded(Long paymentId);
 }

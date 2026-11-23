@@ -83,7 +83,8 @@ public class AuthController {
         authService.forgotPassword(request.getEmail());
 
         return ResponseEntity.ok(
-                ApiResponse.success("Email đặt lại mật khẩu đã được gửi", null)
+                ApiResponse.success("Nếu email tồn tại trong hệ thống, " +
+                        "hướng dẫn đặt lại mật khẩu đã được gửi.", null)
         );
     }
 

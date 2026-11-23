@@ -96,11 +96,4 @@ public class DoctorController {
         return ResponseEntity.ok(ApiResponse.success("Vô hiệu hoá bác sĩ thành công", doctor));
     }
 
-    // DELETE /api/v1/doctors/{id}
-    // Xoá bác sĩ
-    @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
-        doctorService.delete(id);
-        return ResponseEntity.ok(ApiResponse.success("Xoá bác sĩ thành công"));
-    }
 }

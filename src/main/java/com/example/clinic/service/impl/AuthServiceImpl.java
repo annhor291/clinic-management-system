@@ -63,7 +63,7 @@ public class AuthServiceImpl implements AuthService {
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole())
+                .role(Role.PATIENT)
                 .provider(AuthProvider.LOCAL)
                 .enabled(true)
                 .build();
@@ -72,12 +72,14 @@ public class AuthServiceImpl implements AuthService {
 
         // Tạo JWT token cho user vừa đăng ký
         String token = jwtUtils.generateToken(savedUser);
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(savedUser);
 
         // Lấy profileId (patientId hoặc doctorId) nếu có
         Long profileId = getProfileId(savedUser);
 
         return AuthResponse.builder()
                 .token(token)
+                    .refreshToken(refreshToken.getToken())
                 .userId(savedUser.getId())
                 .username(savedUser.getUsername())
                 .email(savedUser.getEmail())
@@ -204,7 +206,7 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenService.revokeAllUserTokens(existingToken.getUser());
     }
 
-    @Override
+    /*@Override
     @Transactional
     public void forgotPassword(String email) {
         User user = userRepository.findByEmail(email)
@@ -223,9 +225,24 @@ public class AuthServiceImpl implements AuthService {
 
         // Gửi email
         emailService.sendForgotPasswordEmail(email, resetToken);
+    }*/
+
+    @Override
+    @Transactional
+    public void forgotPassword(String email) {
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null || user.getProvider() == AuthProvider.GOOGLE) {
+            return; // im lặng, không lộ thông tin
+        }
+        String resetToken = UUID.randomUUID().toString();
+        user.setResetToken(resetToken);
+        user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(15));
+        userRepository.save(user);
+        emailService.sendForgotPasswordEmail(email, resetToken);
     }
 
     @Override
+    @Transactional
     public void resetPassword(String resetToken, String newPassword) {
         User user = userRepository.findByResetToken(resetToken)
                 .orElseThrow(() -> new ResourceNotFoundException("Reset token không hợp lệ"));

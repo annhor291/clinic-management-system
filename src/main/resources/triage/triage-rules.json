@@ -1,0 +1,462 @@
+{
+  "version": 1,
+  "gate": {"minTopScore": 5, "minMargin": 3, "strongWeight": 3},
+  "specialties": {
+    "INTERNAL": "Nội khoa",
+    "CARDIO": "Tim mạch",
+    "DERMA": "Da liễu",
+    "PEDIATRIC": "Nhi khoa",
+    "NEURO": "Thần kinh",
+    "MSK": "Xương khớp",
+    "GI": "Tiêu hóa",
+    "RESP": "Hô hấp",
+    "ENT": "Tai mũi họng",
+    "EYE": "Mắt",
+    "DENTAL": "Răng hàm mặt"
+  },
+  "questions": [
+    {
+      "code": "AGE",
+      "text": "Người cần khám thuộc nhóm tuổi nào?",
+      "type": "SINGLE",
+      "options": [
+        {"code": "INFANT", "label": "Dưới 1 tuổi"},
+        {"code": "CHILD", "label": "Từ 1 đến 14 tuổi"},
+        {"code": "ADULT", "label": "Từ 15 đến 59 tuổi"},
+        {"code": "SENIOR", "label": "Từ 60 tuổi trở lên"}
+      ]
+    },
+    {
+      "code": "Q_RED_FLAGS",
+      "text": "Có dấu hiệu nào sau đây không?",
+      "type": "MULTI",
+      "options": [
+        {"code": "RF_CHEST", "label": "Đau, tức nặng hoặc bóp nghẹt ở ngực kéo dài trên 5 phút, hoặc lan ra tay, vai, hàm, lưng"},
+        {"code": "RF_BREATH", "label": "Khó thở nặng, thở không ra hơi, tím môi hoặc đầu ngón tay"},
+        {"code": "RF_CONSCIOUS", "label": "Ngất, lơ mơ, lú lẫn hoặc khó đánh thức"},
+        {"code": "RF_STROKE", "label": "Méo miệng, yếu hoặc liệt một bên người, nói ngọng hoặc không nói được"},
+        {"code": "RF_HEADACHE", "label": "Đau đầu dữ dội đột ngột, đau nhất từ trước đến giờ"},
+        {"code": "RF_SEIZURE", "label": "Co giật"},
+        {"code": "RF_BLEED", "label": "Nôn ra máu, ho ra máu, đi ngoài ra máu hoặc phân đen, hoặc chảy máu không cầm được"},
+        {"code": "RF_ABDOMEN", "label": "Đau bụng dữ dội, bụng cứng"},
+        {"code": "RF_ALLERGY", "label": "Sưng môi, lưỡi, mặt hoặc khó nuốt, kèm khò khè hay khó thở sau khi ăn, uống thuốc hoặc bị côn trùng đốt"},
+        {"code": "RF_MENINGEAL", "label": "Sốt kèm cứng cổ, hoặc nổi chấm, mảng đỏ tím không mất đi khi ấn vào"},
+        {"code": "RF_EYE", "label": "Mất thị lực đột ngột hoặc đau mắt dữ dội"},
+        {"code": "RF_TRAUMA", "label": "Chấn thương nặng (tai nạn giao thông, ngã cao, vết thương sâu, nghi gãy xương hở)"},
+        {"code": "RF_LIMB", "label": "Đau dữ dội đột ngột ở một tay hoặc chân, lạnh và tái nhợt"},
+        {"code": "RF_PREGNANCY", "label": "Đang mang thai và ra máu âm đạo hoặc đau bụng dữ dội"},
+        {"code": "RF_SELF_HARM", "label": "Có ý nghĩ tự làm hại bản thân"},
+        {"code": "RF_NONE", "label": "Không có dấu hiệu nào ở trên", "exclusive": true}
+      ]
+    },
+    {
+      "code": "Q_COMPLAINT",
+      "text": "Điều khiến bạn khó chịu nhất là gì?",
+      "type": "SINGLE",
+      "options": [
+        {"code": "PAIN", "label": "Đau ở thân mình (ngực, bụng, lưng, khớp, tay chân)"},
+        {"code": "HEADACHE", "label": "Nhức đầu"},
+        {"code": "DIZZY", "label": "Chóng mặt"},
+        {"code": "COUGH", "label": "Ho"},
+        {"code": "FEVER", "label": "Sốt"},
+        {"code": "PALPITATION", "label": "Hồi hộp, đánh trống ngực, tim đập nhanh"},
+        {"code": "BREATH", "label": "Hụt hơi, khó thở nhẹ"},
+        {"code": "ENT", "label": "Mũi, họng, tai"},
+        {"code": "EYE", "label": "Mắt"},
+        {"code": "DENTAL", "label": "Răng miệng"},
+        {"code": "SKIN", "label": "Da, tóc, móng"},
+        {"code": "DIGESTIVE", "label": "Tiêu hóa (buồn nôn, tiêu chảy, táo bón, ợ nóng)"},
+        {"code": "FATIGUE", "label": "Mệt mỏi"},
+        {"code": "INJURY", "label": "Chấn thương"},
+        {"code": "OTHER", "label": "Khác / tôi không rõ"}
+      ]
+    },
+    {
+      "code": "Q_PAIN_AREA",
+      "text": "Bạn đau ở đâu?",
+      "type": "SINGLE",
+      "showIf": {"Q_COMPLAINT": ["PAIN"]},
+      "options": [
+        {"code": "CHEST", "label": "Ngực"},
+        {"code": "ABD_UPPER", "label": "Bụng trên (vùng dạ dày)"},
+        {"code": "ABD_LOWER_RIGHT", "label": "Bụng dưới bên phải"},
+        {"code": "ABD_LOWER_OTHER", "label": "Bụng dưới (vị trí khác)"},
+        {"code": "ABD_ALL", "label": "Đau khắp bụng"},
+        {"code": "BACK_NECK", "label": "Lưng, cổ, vai gáy"},
+        {"code": "JOINT", "label": "Khớp (gối, vai, khuỷu, cổ tay...)"},
+        {"code": "MUSCLE_LIMB", "label": "Cơ bắp tay chân"}
+      ]
+    },
+    {
+      "code": "Q_HEAD_AREA",
+      "text": "Bạn đau đầu ở vị trí nào?",
+      "type": "SINGLE",
+      "showIf": {"Q_COMPLAINT": ["HEADACHE"]},
+      "options": [
+        {"code": "ONE_SIDE", "label": "Một bên đầu"},
+        {"code": "BOTH_SIDES", "label": "Hai bên hoặc cả đầu"},
+        {"code": "FOREHEAD_EYES", "label": "Trán và quanh mắt"},
+        {"code": "BACK_OF_HEAD", "label": "Vùng sau gáy"}
+      ]
+    },
+    {
+      "code": "Q_DIZZY_TYPE",
+      "text": "Bạn chóng mặt như thế nào?",
+      "type": "SINGLE",
+      "showIf": {"Q_COMPLAINT": ["DIZZY"]},
+      "options": [
+        {"code": "SPINNING", "label": "Quay cuồng, mọi thứ xoay tròn"},
+        {"code": "FAINTNESS", "label": "Choáng, tối sầm mắt như sắp ngất"},
+        {"code": "UNSTEADY", "label": "Loạng choạng, mất thăng bằng"}
+      ]
+    },
+    {
+      "code": "Q_COUGH_TYPE",
+      "text": "Bạn ho như thế nào?",
+      "type": "SINGLE",
+      "showIf": {"Q_COMPLAINT": ["COUGH"]},
+      "options": [
+        {"code": "DRY", "label": "Ho khan"},
+        {"code": "PHLEGM", "label": "Ho có đờm"},
+        {"code": "WHEEZE", "label": "Ho kèm khò khè"}
+      ]
+    },
+    {
+      "code": "Q_ENT_TYPE",
+      "text": "Bạn khó chịu ở đâu?",
+      "type": "SINGLE",
+      "showIf": {"Q_COMPLAINT": ["ENT"]},
+      "options": [
+        {"code": "SORE_THROAT", "label": "Đau họng, khản tiếng"},
+        {"code": "NOSE", "label": "Nghẹt mũi, chảy mũi"},
+        {"code": "EAR", "label": "Đau tai, ù tai, nghe kém"}
+      ]
+    },
+    {
+      "code": "Q_EYE_TYPE",
+      "text": "Mắt bạn thế nào?",
+      "type": "SINGLE",
+      "showIf": {"Q_COMPLAINT": ["EYE"]},
+      "options": [
+        {"code": "RED_ITCHY", "label": "Đỏ, ngứa, chảy ghèn"},
+        {"code": "BLURRING", "label": "Nhìn mờ dần"},
+        {"code": "STRAIN_DRY", "label": "Mỏi, khô mắt"}
+      ]
+    },
+    {
+      "code": "Q_DENTAL_TYPE",
+      "text": "Bạn gặp vấn đề gì?",
+      "type": "SINGLE",
+      "showIf": {"Q_COMPLAINT": ["DENTAL"]},
+      "options": [
+        {"code": "TOOTHACHE", "label": "Đau răng"},
+        {"code": "GUMS", "label": "Sưng hoặc chảy máu nướu"},
+        {"code": "MOUTH_ULCER", "label": "Loét miệng"}
+      ]
+    },
+    {
+      "code": "Q_SKIN_TYPE",
+      "text": "Bạn gặp vấn đề gì ở da?",
+      "type": "SINGLE",
+      "showIf": {"Q_COMPLAINT": ["SKIN"]},
+      "options": [
+        {"code": "RASH_ITCH", "label": "Ngứa, nổi mẩn"},
+        {"code": "ACNE", "label": "Mụn"},
+        {"code": "HAIR_NAIL", "label": "Rụng tóc, nấm móng"},
+        {"code": "SKIN_INFECTION", "label": "Vùng da sưng, đỏ, nóng, đau"}
+      ]
+    },
+    {
+      "code": "Q_DIGESTIVE_TYPE",
+      "text": "Bạn gặp vấn đề gì?",
+      "type": "SINGLE",
+      "showIf": {"Q_COMPLAINT": ["DIGESTIVE"]},
+      "options": [
+        {"code": "NAUSEA_VOMIT", "label": "Buồn nôn, nôn"},
+        {"code": "DIARRHEA", "label": "Tiêu chảy"},
+        {"code": "CONSTIPATION", "label": "Táo bón"},
+        {"code": "HEARTBURN_BLOAT", "label": "Ợ nóng, đầy bụng"}
+      ]
+    },
+    {
+      "code": "Q_INJURY_TYPE",
+      "text": "Bạn bị chấn thương gì?",
+      "type": "SINGLE",
+      "showIf": {"Q_COMPLAINT": ["INJURY"]},
+      "options": [
+        {"code": "SPRAIN", "label": "Bong gân, bầm tím sau va chạm nhẹ"},
+        {"code": "CUT", "label": "Vết cắt, trầy xước"}
+      ]
+    },
+    {
+      "code": "Q_QUALITY",
+      "text": "Cảm giác đau của bạn thế nào?",
+      "type": "SINGLE",
+      "showIf": {"Q_COMPLAINT": ["PAIN", "HEADACHE"]},
+      "options": [
+        {"code": "CRAMPING", "label": "Quặn thắt từng cơn"},
+        {"code": "STABBING", "label": "Nhói như dao đâm"},
+        {"code": "DULL", "label": "Âm ỉ, khó chịu nhẹ"},
+        {"code": "PRESSURE", "label": "Tức nặng, bóp nghẹt"},
+        {"code": "BURNING", "label": "Nóng rát"},
+        {"code": "THROBBING", "label": "Giật theo nhịp mạch"}
+      ]
+    },
+    {
+      "code": "Q_ONSET",
+      "text": "Triệu chứng bắt đầu từ khi nào?",
+      "type": "SINGLE",
+      "showIf": {"Q_COMPLAINT": ["PAIN", "HEADACHE", "DIZZY", "COUGH", "FEVER", "PALPITATION", "BREATH", "ENT", "EYE", "DENTAL", "SKIN", "DIGESTIVE", "FATIGUE", "INJURY"]},
+      "options": [
+        {"code": "HOURS", "label": "Trong vài giờ qua"},
+        {"code": "DAYS_1_3", "label": "Từ 1 đến 3 ngày"},
+        {"code": "DAYS_4_7", "label": "Từ 4 đến 7 ngày"},
+        {"code": "WEEKS_1_3", "label": "Từ 1 đến 3 tuần"},
+        {"code": "OVER_3_WEEKS", "label": "Hơn 3 tuần"}
+      ]
+    },
+    {
+      "code": "Q_PATTERN",
+      "text": "Triệu chứng diễn ra thế nào?",
+      "type": "SINGLE",
+      "showIf": {"Q_COMPLAINT": ["PAIN", "HEADACHE", "COUGH", "PALPITATION"]},
+      "options": [
+        {"code": "CONTINUOUS", "label": "Liên tục"},
+        {"code": "OCCASIONAL", "label": "Thỉnh thoảng hoặc từng cơn, lúc có lúc không"},
+        {"code": "WORSENING", "label": "Liên tục và ngày càng nặng hơn"}
+      ]
+    },
+    {
+      "code": "Q_IMPACT",
+      "text": "Triệu chứng ảnh hưởng đến sinh hoạt của bạn thế nào?",
+      "type": "SINGLE",
+      "showIf": {"Q_COMPLAINT": ["PAIN", "HEADACHE", "DIZZY", "COUGH", "FEVER", "PALPITATION", "BREATH", "ENT", "EYE", "DIGESTIVE", "FATIGUE", "INJURY"]},
+      "options": [
+        {"code": "MILD", "label": "Khó chịu nhẹ, vẫn sinh hoạt bình thường"},
+        {"code": "MODERATE", "label": "Ảnh hưởng một phần: khó tập trung, ăn ngủ kém"},
+        {"code": "SEVERE", "label": "Nặng: không thể làm việc hay sinh hoạt"}
+      ]
+    },
+    {
+      "code": "Q_CARE_GROUP",
+      "text": "Bạn có thuộc trường hợp nào sau đây không?",
+      "type": "MULTI",
+      "options": [
+        {"code": "PREGNANT", "label": "Đang mang thai"},
+        {"code": "HEART_LUNG", "label": "Bệnh tim hoặc phổi mạn tính, hen"},
+        {"code": "DIABETES", "label": "Đái tháo đường"},
+        {"code": "IMMUNE_CANCER", "label": "Ung thư, hoặc đang dùng thuốc ức chế miễn dịch, corticoid kéo dài"},
+        {"code": "RECENT_SURGERY", "label": "Mới phẫu thuật hoặc nằm viện trong 1 tháng qua"},
+        {"code": "CARE_NONE", "label": "Không có trường hợp nào ở trên", "exclusive": true}
+      ]
+    },
+    {
+      "code": "Q_EXTRA",
+      "text": "Bạn còn gặp thêm điều nào sau đây không?",
+      "type": "MULTI",
+      "options": [
+        {"code": "FEVER", "label": "Sốt"},
+        {"code": "FATIGUE", "label": "Mệt mỏi"},
+        {"code": "NAUSEA", "label": "Buồn nôn"},
+        {"code": "WEIGHT_LOSS", "label": "Sụt cân không rõ lý do"},
+        {"code": "BREATHLESS_EXERTION", "label": "Hụt hơi khi gắng sức"},
+        {"code": "NUMBNESS", "label": "Tê hoặc yếu tay chân"},
+        {"code": "EXTRA_NONE", "label": "Không có điều nào ở trên", "exclusive": true}
+      ]
+    }
+  ],
+  "escalation": [
+    {
+      "id": "ESC_RED_FLAGS",
+      "when": {"Q_RED_FLAGS": ["RF_CHEST", "RF_BREATH", "RF_CONSCIOUS", "RF_STROKE", "RF_HEADACHE", "RF_SEIZURE", "RF_BLEED", "RF_ABDOMEN", "RF_ALLERGY", "RF_MENINGEAL", "RF_EYE", "RF_TRAUMA", "RF_LIMB", "RF_PREGNANCY"]},
+      "outcome": "EMERGENCY",
+      "reason": "Có dấu hiệu nguy hiểm cần cấp cứu ngay"
+    },
+    {
+      "id": "ESC_SELF_HARM",
+      "when": {"Q_RED_FLAGS": ["RF_SELF_HARM"]},
+      "outcome": "EMERGENCY",
+      "reason": "Có ý nghĩ tự làm hại bản thân, cần được hỗ trợ ngay"
+    },
+    {
+      "id": "ESC_INFANT",
+      "when": {"AGE": ["INFANT"]},
+      "outcome": "REFER",
+      "reason": "Trẻ dưới 1 tuổi cần được điều dưỡng tư vấn trực tiếp"
+    },
+    {
+      "id": "ESC_OTHER_COMPLAINT",
+      "when": {"Q_COMPLAINT": ["OTHER"]},
+      "outcome": "REFER",
+      "reason": "Triệu chứng nằm ngoài phạm vi gợi ý của hệ thống"
+    },
+    {
+      "id": "ESC_CUT",
+      "when": {"Q_INJURY_TYPE": ["CUT"]},
+      "outcome": "REFER",
+      "reason": "Vết thương hở cần được nhân viên y tế đánh giá"
+    },
+    {
+      "id": "ESC_SEVERE_IMPACT",
+      "when": {"Q_IMPACT": ["SEVERE"]},
+      "outcome": "REFER",
+      "reason": "Triệu chứng nặng, ảnh hưởng nhiều đến sinh hoạt"
+    },
+    {
+      "id": "ESC_CHEST_PAIN",
+      "when": {"Q_PAIN_AREA": ["CHEST"]},
+      "outcome": "REFER",
+      "reason": "Đau ngực cần được nhân viên y tế đánh giá trước"
+    },
+    {
+      "id": "ESC_ABDOMEN_RIGHT_OR_ALL",
+      "when": {"Q_PAIN_AREA": ["ABD_LOWER_RIGHT", "ABD_ALL"]},
+      "outcome": "REFER",
+      "reason": "Đau bụng ở vị trí cần được đánh giá trực tiếp"
+    },
+    {
+      "id": "ESC_ACUTE_ABDOMEN",
+      "when": {"Q_PAIN_AREA": ["ABD_UPPER", "ABD_LOWER_RIGHT", "ABD_LOWER_OTHER", "ABD_ALL"], "Q_ONSET": ["HOURS", "DAYS_1_3"], "Q_IMPACT": ["MODERATE", "SEVERE"]},
+      "outcome": "REFER",
+      "reason": "Đau bụng mới xuất hiện và khá nặng"
+    },
+    {
+      "id": "ESC_FEVER_PROLONGED",
+      "when": {"Q_COMPLAINT": ["FEVER"], "Q_ONSET": ["DAYS_4_7", "WEEKS_1_3", "OVER_3_WEEKS"]},
+      "outcome": "REFER",
+      "reason": "Sốt kéo dài từ 4 ngày"
+    },
+    {
+      "id": "ESC_EXTRA_FEVER_PROLONGED",
+      "when": {"Q_EXTRA": ["FEVER"], "Q_ONSET": ["DAYS_4_7", "WEEKS_1_3", "OVER_3_WEEKS"]},
+      "outcome": "REFER",
+      "reason": "Có sốt kèm triệu chứng kéo dài từ 4 ngày"
+    },
+    {
+      "id": "ESC_FEVER_SENIOR",
+      "when": {"AGE": ["SENIOR"], "Q_COMPLAINT": ["FEVER"]},
+      "outcome": "REFER",
+      "reason": "Sốt ở người từ 60 tuổi cần được tư vấn trước"
+    },
+    {
+      "id": "ESC_EXTRA_FEVER_SENIOR",
+      "when": {"AGE": ["SENIOR"], "Q_EXTRA": ["FEVER"]},
+      "outcome": "REFER",
+      "reason": "Có sốt ở người từ 60 tuổi cần được tư vấn trước"
+    },
+    {
+      "id": "ESC_HEADACHE_ACUTE",
+      "when": {"Q_COMPLAINT": ["HEADACHE"], "Q_ONSET": ["HOURS"], "Q_IMPACT": ["MODERATE", "SEVERE"]},
+      "outcome": "REFER",
+      "reason": "Nhức đầu mới xuất hiện và khá nặng"
+    },
+    {
+      "id": "ESC_HEADACHE_FEVER",
+      "when": {"Q_COMPLAINT": ["HEADACHE"], "Q_EXTRA": ["FEVER"]},
+      "outcome": "REFER",
+      "reason": "Nhức đầu kèm sốt cần được tư vấn trước"
+    },
+    {
+      "id": "ESC_DIZZY_UNSTEADY",
+      "when": {"Q_DIZZY_TYPE": ["UNSTEADY"]},
+      "outcome": "REFER",
+      "reason": "Mất thăng bằng cần được đánh giá trước"
+    },
+    {
+      "id": "ESC_DIZZY_SENIOR",
+      "when": {"AGE": ["SENIOR"], "Q_COMPLAINT": ["DIZZY"], "Q_IMPACT": ["MODERATE", "SEVERE"]},
+      "outcome": "REFER",
+      "reason": "Chóng mặt khá nặng ở người từ 60 tuổi"
+    },
+    {
+      "id": "ESC_NUMBNESS",
+      "when": {"Q_EXTRA": ["NUMBNESS"]},
+      "outcome": "REFER",
+      "reason": "Tê hoặc yếu tay chân cần được đánh giá trước"
+    },
+    {
+      "id": "ESC_WEIGHT_LOSS",
+      "when": {"Q_EXTRA": ["WEIGHT_LOSS"]},
+      "outcome": "REFER",
+      "reason": "Sụt cân không rõ lý do cần được đánh giá toàn diện"
+    },
+    {
+      "id": "ESC_CARE_GROUP_MODERATE",
+      "when": {"Q_CARE_GROUP": ["HEART_LUNG", "DIABETES", "IMMUNE_CANCER", "RECENT_SURGERY"], "Q_IMPACT": ["MODERATE", "SEVERE"]},
+      "outcome": "REFER",
+      "reason": "Có bệnh nền hoặc nguy cơ cao kèm triệu chứng không nhẹ"
+    },
+    {
+      "id": "ESC_CARE_GROUP_FEVER",
+      "when": {"Q_CARE_GROUP": ["PREGNANT", "HEART_LUNG", "DIABETES", "IMMUNE_CANCER", "RECENT_SURGERY"], "Q_COMPLAINT": ["FEVER"]},
+      "outcome": "REFER",
+      "reason": "Có sốt ở người thuộc nhóm cần lưu ý"
+    },
+    {
+      "id": "ESC_CARE_GROUP_EXTRA_FEVER",
+      "when": {"Q_CARE_GROUP": ["PREGNANT", "HEART_LUNG", "DIABETES", "IMMUNE_CANCER", "RECENT_SURGERY"], "Q_EXTRA": ["FEVER"]},
+      "outcome": "REFER",
+      "reason": "Có sốt ở người thuộc nhóm cần lưu ý"
+    },
+    {
+      "id": "ESC_PREGNANT",
+      "when": {"Q_CARE_GROUP": ["PREGNANT"]},
+      "outcome": "REFER",
+      "reason": "Phụ nữ mang thai cần được điều dưỡng tư vấn trước"
+    },
+    {
+      "id": "ESC_WORSENING",
+      "when": {"Q_PATTERN": ["WORSENING"]},
+      "outcome": "REFER",
+      "reason": "Triệu chứng đang nặng dần"
+    },
+    {
+      "id": "ESC_PALPITATION_CONTINUOUS",
+      "when": {"Q_COMPLAINT": ["PALPITATION"], "Q_PATTERN": ["CONTINUOUS"]},
+      "outcome": "REFER",
+      "reason": "Tim đập nhanh liên tục cần được đánh giá trước"
+    },
+    {
+      "id": "ESC_MOUTH_ULCER_LONG",
+      "when": {"Q_DENTAL_TYPE": ["MOUTH_ULCER"], "Q_ONSET": ["OVER_3_WEEKS"]},
+      "outcome": "REFER",
+      "reason": "Loét miệng kéo dài hơn 3 tuần cần được khám kỹ"
+    }
+  ],
+  "scoring": [
+    {"id": "SC_PAIN_BACK", "when": {"AGE": ["ADULT", "SENIOR"], "Q_PAIN_AREA": ["BACK_NECK"]}, "weights": {"MSK": 5, "NEURO": 1}},
+    {"id": "SC_PAIN_JOINT", "when": {"AGE": ["ADULT", "SENIOR"], "Q_PAIN_AREA": ["JOINT"]}, "weights": {"MSK": 5}},
+    {"id": "SC_PAIN_MUSCLE", "when": {"AGE": ["ADULT", "SENIOR"], "Q_PAIN_AREA": ["MUSCLE_LIMB"]}, "weights": {"MSK": 5}},
+    {"id": "SC_PAIN_ABD_UPPER", "when": {"AGE": ["ADULT", "SENIOR"], "Q_PAIN_AREA": ["ABD_UPPER"]}, "weights": {"GI": 5, "INTERNAL": 1}},
+    {"id": "SC_PAIN_ABD_OTHER", "when": {"AGE": ["ADULT", "SENIOR"], "Q_PAIN_AREA": ["ABD_LOWER_OTHER"]}, "weights": {"GI": 3, "INTERNAL": 3}},
+    {"id": "SC_PAIN_ABD_QUALITY", "when": {"AGE": ["ADULT", "SENIOR"], "Q_PAIN_AREA": ["ABD_UPPER", "ABD_LOWER_OTHER"], "Q_QUALITY": ["CRAMPING", "BURNING"]}, "weights": {"GI": 2}},
+    {"id": "SC_HEAD_ONE_SIDE", "when": {"AGE": ["ADULT", "SENIOR"], "Q_HEAD_AREA": ["ONE_SIDE"]}, "weights": {"NEURO": 5}},
+    {"id": "SC_HEAD_BOTH", "when": {"AGE": ["ADULT", "SENIOR"], "Q_HEAD_AREA": ["BOTH_SIDES"]}, "weights": {"NEURO": 5}},
+    {"id": "SC_HEAD_BACK", "when": {"AGE": ["ADULT", "SENIOR"], "Q_HEAD_AREA": ["BACK_OF_HEAD"]}, "weights": {"NEURO": 3, "MSK": 3}},
+    {"id": "SC_HEAD_FOREHEAD", "when": {"AGE": ["ADULT", "SENIOR"], "Q_HEAD_AREA": ["FOREHEAD_EYES"]}, "weights": {"ENT": 3, "NEURO": 3, "EYE": 1}},
+    {"id": "SC_HEAD_THROBBING", "when": {"AGE": ["ADULT", "SENIOR"], "Q_COMPLAINT": ["HEADACHE"], "Q_QUALITY": ["THROBBING"]}, "weights": {"NEURO": 2}},
+    {"id": "SC_HEAD_SINUS", "when": {"AGE": ["ADULT", "SENIOR"], "Q_HEAD_AREA": ["FOREHEAD_EYES"], "Q_QUALITY": ["PRESSURE"]}, "weights": {"ENT": 2}},
+    {"id": "SC_DIZZY_SPINNING", "when": {"AGE": ["ADULT", "SENIOR"], "Q_DIZZY_TYPE": ["SPINNING"]}, "weights": {"ENT": 4, "NEURO": 3, "INTERNAL": 1}},
+    {"id": "SC_DIZZY_FAINT", "when": {"AGE": ["ADULT", "SENIOR"], "Q_DIZZY_TYPE": ["FAINTNESS"]}, "weights": {"CARDIO": 3, "INTERNAL": 3}},
+    {"id": "SC_COUGH_SHORT", "when": {"AGE": ["ADULT", "SENIOR"], "Q_COUGH_TYPE": ["DRY", "PHLEGM"], "Q_ONSET": ["HOURS", "DAYS_1_3", "DAYS_4_7"]}, "weights": {"INTERNAL": 5, "RESP": 2}},
+    {"id": "SC_COUGH_LONG", "when": {"AGE": ["ADULT", "SENIOR"], "Q_COUGH_TYPE": ["DRY", "PHLEGM"], "Q_ONSET": ["WEEKS_1_3", "OVER_3_WEEKS"]}, "weights": {"RESP": 5, "INTERNAL": 2}},
+    {"id": "SC_COUGH_WHEEZE", "when": {"AGE": ["ADULT", "SENIOR"], "Q_COUGH_TYPE": ["WHEEZE"]}, "weights": {"RESP": 5, "INTERNAL": 1}},
+    {"id": "SC_FEVER", "when": {"AGE": ["ADULT", "SENIOR"], "Q_COMPLAINT": ["FEVER"]}, "weights": {"INTERNAL": 5}},
+    {"id": "SC_FATIGUE", "when": {"AGE": ["ADULT", "SENIOR"], "Q_COMPLAINT": ["FATIGUE"]}, "weights": {"INTERNAL": 5}},
+    {"id": "SC_PALPITATION", "when": {"AGE": ["ADULT", "SENIOR"], "Q_COMPLAINT": ["PALPITATION"]}, "weights": {"CARDIO": 5, "INTERNAL": 1}},
+    {"id": "SC_BREATH", "when": {"AGE": ["ADULT", "SENIOR"], "Q_COMPLAINT": ["BREATH"]}, "weights": {"RESP": 3, "CARDIO": 3, "INTERNAL": 1}},
+    {"id": "SC_ENT_THROAT", "when": {"AGE": ["ADULT", "SENIOR"], "Q_ENT_TYPE": ["SORE_THROAT"]}, "weights": {"ENT": 5, "INTERNAL": 1}},
+    {"id": "SC_ENT_NOSE", "when": {"AGE": ["ADULT", "SENIOR"], "Q_ENT_TYPE": ["NOSE"]}, "weights": {"ENT": 5}},
+    {"id": "SC_ENT_EAR", "when": {"AGE": ["ADULT", "SENIOR"], "Q_ENT_TYPE": ["EAR"]}, "weights": {"ENT": 5}},
+    {"id": "SC_EYE_ANY", "when": {"AGE": ["ADULT", "SENIOR"], "Q_EYE_TYPE": ["RED_ITCHY", "BLURRING", "STRAIN_DRY"]}, "weights": {"EYE": 5}},
+    {"id": "SC_DENTAL_ANY", "when": {"AGE": ["ADULT", "SENIOR"], "Q_DENTAL_TYPE": ["TOOTHACHE", "GUMS", "MOUTH_ULCER"]}, "weights": {"DENTAL": 5}},
+    {"id": "SC_SKIN_COMMON", "when": {"AGE": ["ADULT", "SENIOR"], "Q_SKIN_TYPE": ["RASH_ITCH", "ACNE", "HAIR_NAIL"]}, "weights": {"DERMA": 5}},
+    {"id": "SC_SKIN_INFECTION", "when": {"AGE": ["ADULT", "SENIOR"], "Q_SKIN_TYPE": ["SKIN_INFECTION"]}, "weights": {"DERMA": 3, "INTERNAL": 3}},
+    {"id": "SC_DIG_NAUSEA", "when": {"AGE": ["ADULT", "SENIOR"], "Q_DIGESTIVE_TYPE": ["NAUSEA_VOMIT"]}, "weights": {"GI": 5, "INTERNAL": 2}},
+    {"id": "SC_DIG_OTHER", "when": {"AGE": ["ADULT", "SENIOR"], "Q_DIGESTIVE_TYPE": ["DIARRHEA", "CONSTIPATION", "HEARTBURN_BLOAT"]}, "weights": {"GI": 5}},
+    {"id": "SC_INJURY_SPRAIN", "when": {"AGE": ["ADULT", "SENIOR"], "Q_INJURY_TYPE": ["SPRAIN"]}, "weights": {"MSK": 5}},
+    {"id": "SC_EXTRA_BREATHLESS", "when": {"AGE": ["ADULT", "SENIOR"], "Q_EXTRA": ["BREATHLESS_EXERTION"]}, "weights": {"RESP": 2, "CARDIO": 2}},
+    {"id": "SC_CHILD_GENERAL", "when": {"AGE": ["CHILD"], "Q_COMPLAINT": ["PAIN", "HEADACHE", "DIZZY", "COUGH", "FEVER", "PALPITATION", "BREATH", "ENT", "EYE", "SKIN", "DIGESTIVE", "FATIGUE", "INJURY"]}, "weights": {"PEDIATRIC": 5}},
+    {"id": "SC_CHILD_DENTAL", "when": {"AGE": ["CHILD"], "Q_COMPLAINT": ["DENTAL"]}, "weights": {"DENTAL": 5}}
+  ]
+}

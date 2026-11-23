@@ -6,9 +6,11 @@ import com.example.clinic.projection.AppointmentByDoctorCount;
 import com.example.clinic.projection.AppointmentBySpecialtyCount;
 import com.example.clinic.projection.AppointmentStatusCount;
 import com.example.clinic.projection.MonthlyRevenueStats;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -112,11 +114,12 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     // Tìm id các lịch hẹn PENDING đã tạo quá lâu mà chưa được xác nhận — dùng cho Pending Expiry Scheduler
     @Query("""
-        SELECT a.id FROM Appointment a
-        WHERE a.status = 'PENDING'
-        AND a.createdAt < :cutoff
-        """)
-    List<Long> findExpirablePendingIds(@Param("cutoff") LocalDateTime cutoff);
+    SELECT a.id FROM Appointment a
+    WHERE a.status = 'PENDING'
+    AND (a.createdAt < :createdCutoff OR a.appointmentTime < :startCutoff)
+    """)
+    List<Long> findExpirablePendingIds(@Param("createdCutoff") LocalDateTime createdCutoff,
+                                       @Param("startCutoff") LocalDateTime startCutoff);
 
     // QUERY THỐNG KÊ ADMIN DASHBOARD — dùng Projection thay vì Object[]
 
@@ -213,4 +216,23 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
         AND a.status IN ('COMPLETED', 'NO_SHOW')
         """)
     long countFinishedInSchedule(@Param("scheduleId") Long scheduleId);
+
+    // Khoá dòng lịch hẹn khi tạo giao dịch thanh toán — tránh 2 request đồng thời tạo 2 giao dịch
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT a FROM Appointment a WHERE a.id = :id")
+    Optional<Appointment> findByIdForUpdate(@Param("id") Long id);
+
+    boolean existsByPatientId(Long patientId);
+
+    // Lịch còn hiệu lực của bác sĩ trong khoảng [fromTime, toTime)
+    @Query("""
+    SELECT a.id FROM Appointment a
+    WHERE a.doctor.id = :doctorId
+    AND a.status IN ('PENDING', 'CONFIRMED')
+    AND a.appointmentTime >= :fromTime
+    AND a.appointmentTime < :toTime
+    """)
+    List<Long> findActiveIdsByDoctorBetween(@Param("doctorId") Long doctorId,
+                                            @Param("fromTime") LocalDateTime fromTime,
+                                            @Param("toTime") LocalDateTime toTime);
 }

@@ -1,4 +1,4 @@
-package com.example.clinic.booking.event.listener;
+package com.example.clinic.booking.listener;
 
 import com.example.clinic.booking.event.*;
 import com.example.clinic.service.NotificationService;
@@ -61,7 +61,7 @@ public class AppointmentNotificationListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onRescheduled(AppointmentRescheduledEvent event) {
         safeRun(() -> notificationService.notifyAppointmentRescheduled(
-                event.oldAppointmentId(), event.newAppointmentId()), event.newAppointmentId());
+                event.appointmentId(), event.oldAppointmentTime()), event.appointmentId());
     }
 
     // Bọc try/catch riêng cho từng listener — 1 lỗi gửi thông báo không được làm crash thread

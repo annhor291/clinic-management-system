@@ -16,4 +16,8 @@ public interface AuditLogService {
 
     PageResponse<AuditLogResponse> search(AuditActionType actionType, String targetEntityType,
                                           int page, int size);
+
+    // Dùng cho hành động do hệ thống thực hiện (IPN, scheduler): user_id = NULL
+    void recordSystem(AuditActionType actionType, String targetEntityType, Long targetEntityId,
+                      String description, Object before, Object after);
 }

@@ -89,6 +89,20 @@ public class PatientController {
         return ResponseEntity.ok(ApiResponse.success("Cập nhật thông tin bệnh nhân thành công", patient));
     }
 
+    // POST /api/v1/patients/me — bệnh nhân tự tạo hồ sơ của mình
+    @PostMapping("/me")
+    public ResponseEntity<ApiResponse<PatientResponse>> createMe(@Valid @RequestBody PatientCreateRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Tạo hồ sơ bệnh nhân thành công", patientService.createMe(request)));
+    }
+
+    // PUT /api/v1/patients/me — bệnh nhân tự sửa hồ sơ của mình
+    @PutMapping("/me")
+    public ResponseEntity<ApiResponse<PatientResponse>> updateMe(@Valid @RequestBody PatientUpdateRequest request) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Cập nhật hồ sơ thành công", patientService.updateMe(request)));
+    }
+
     // DELETE /api/v1/patients/{id}
     // Xoá bệnh nhân
     @DeleteMapping("/{id}")

@@ -125,6 +125,9 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
             throw new DuplicateResourceException(
                     "Bác sĩ đã có ca " + shiftType + " vào ngày " + workDate);
         }
+        if (!doctor.isActive()) {
+            throw new IllegalStateException("Không thể tạo ca làm việc cho bác sĩ đang bị vô hiệu hóa");
+        }
 
         DoctorSchedule schedule = DoctorSchedule.builder()
                 .doctor(doctor)
@@ -222,23 +225,37 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         return getByDoctorAndDateRange(doctorId, weekStart, weekEnd);
     }
 
-    // Vô hiệu hoá ca làm việc
+    // API công khai cho admin/bác sĩ: có kiểm tra
     @Override
     @Transactional
     public DoctorScheduleResponse deactivate(Long id) {
         DoctorSchedule schedule = findByIdOrThrow(id);
-        schedule.setActive(false);
 
-        // Block tất cả slot AVAILABLE trong ca này
+        boolean hasBooked = schedule.getTimeSlots().stream()
+                .anyMatch(s -> s.getStatus() == SlotStatus.BOOKED);
+        if (hasBooked) {
+            throw new IllegalStateException(
+                    "Ca làm việc đã có lịch hẹn. Hãy gửi đơn xin nghỉ để hệ thống hủy lịch và thông báo bệnh nhân");
+        }
+        return applyBlock(schedule);
+    }
+
+    // Nội bộ cho DoctorBlockService: lịch hẹn đã được hủy trước đó nên không cần kiểm tra
+    @Override
+    @Transactional
+    public DoctorScheduleResponse blockSchedule(Long id) {
+        return applyBlock(findByIdOrThrow(id));
+    }
+
+    private DoctorScheduleResponse applyBlock(DoctorSchedule schedule) {
+        schedule.setActive(false);
         schedule.getTimeSlots().forEach(slot -> {
             if (slot.getStatus() == SlotStatus.AVAILABLE) {
                 slot.setStatus(SlotStatus.BLOCKED);
             }
         });
         timeSlotRepository.saveAll(schedule.getTimeSlots());
-
-        DoctorSchedule saved = scheduleRepository.save(schedule);
-        return scheduleMapper.toResponseWithSlots(saved);
+        return scheduleMapper.toResponseWithSlots(scheduleRepository.save(schedule));
     }
 
     // Xoá ca làm việc
@@ -327,6 +344,7 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
                         .slotDate(schedule.getWorkDate())
                         .startTime(current)
                         .endTime(slotEnd)
+                        .queueNumber(position)
                         .status(SlotStatus.AVAILABLE)
                         .build();
 

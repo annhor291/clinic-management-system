@@ -72,8 +72,13 @@ public class Appointment {
     private LocalDateTime cancelledAt;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "cancelled_by", length = 10)
+    @Column(name = "cancelled_by", length = 20)
     private CancelledBy cancelledBy;
+
+    // true: do phía phòng khám hủy (bác sĩ nghỉ, admin hủy...). Dùng để khóa slot và gợi ý đặt lịch tương tự
+    @Column(name = "cancelled_by_clinic", nullable = false, columnDefinition = "boolean default false")
+    @Builder.Default
+    private boolean cancelledByClinic = false;
 
     // ===== Đổi lịch =====
     // Tự tham chiếu: nếu đây là lịch đổi → trỏ về lịch cũ

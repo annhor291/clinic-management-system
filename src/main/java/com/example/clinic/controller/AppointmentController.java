@@ -6,8 +6,10 @@ import com.example.clinic.dto.request.RescheduleRequest;
 import com.example.clinic.dto.response.ApiResponse;
 import com.example.clinic.dto.response.AppointmentResponse;
 import com.example.clinic.dto.response.PageResponse;
+import com.example.clinic.dto.response.SuggestedSlotResponse;
 import com.example.clinic.entity.enums.AppointmentStatus;
 import com.example.clinic.service.AppointmentService;
+import com.example.clinic.service.AppointmentSuggestionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -16,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/appointments")
@@ -23,6 +26,7 @@ import java.time.LocalDateTime;
 public class AppointmentController {
 
     private final AppointmentService appointmentService;
+    private final AppointmentSuggestionService suggestionService;
 
     // GET /api/v1/appointments/{id}
     // Lấy chi tiết lịch hẹn theo id
@@ -142,5 +146,13 @@ public class AppointmentController {
 
         AppointmentResponse appointment = appointmentService.reschedule(id, request);
         return ResponseEntity.ok(ApiResponse.success("Đổi lịch hẹn thành công", appointment));
+    }
+
+    // GET /api/v1/appointments/{id}/suggestions
+    // Gợi ý các slot thay thế cho lịch đã hủy hoặc hết hạn
+    @GetMapping("/{id}/suggestions")
+    public ResponseEntity<ApiResponse<List<SuggestedSlotResponse>>> suggestAlternatives(@PathVariable Long id) {
+        List<SuggestedSlotResponse> result = suggestionService.suggestAlternatives(id);
+        return ResponseEntity.ok(ApiResponse.success("Gợi ý lịch khám thay thế", result));
     }
 }

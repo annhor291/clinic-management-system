@@ -19,4 +19,7 @@ public class CancelRequest {
     @NotBlank(message = "Lý do hủy không được để trống")
     @Size(max = 500, message = "Lý do hủy không được vượt quá 500 ký tự")
     private String reason;
+
+    // Admin/lễ tân hủy giúp theo yêu cầu của bệnh nhân (khi đó slot được mở lại như bệnh nhân tự hủy)
+    private boolean onBehalfOfPatient;
 }
