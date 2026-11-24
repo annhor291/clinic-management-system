@@ -162,6 +162,10 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<AppointmentResponse> getByPatient(Long patientId, int page, int size) {
+        // Bác sĩ không tra lịch theo bệnh nhân; xem lịch của mình qua danh sách theo bác sĩ
+        if (SecurityUtil.isDoctor()) {
+            throw new AccessDeniedException("Bác sĩ chỉ có thể xem lịch hẹn của chính mình");
+        }
         // Patient chỉ được xem lịch hẹn của chin mình
         if (SecurityUtil.isPatient()) {
             Patient patient = patientRepository.findById(patientId)
@@ -181,6 +185,10 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<AppointmentResponse> getByDoctor(Long doctorId, int page, int size) {
+        // Bệnh nhân không được xem danh sách lịch hẹn theo bác sĩ (chứa thông tin bệnh nhân khác)
+        if (SecurityUtil.isPatient()) {
+            throw new AccessDeniedException("Bạn không có quyền xem lịch hẹn của bác sĩ");
+        }
         // DOCTOR chỉ được xem lịch hẹn của chính mình
         if (SecurityUtil.isDoctor()) {
             Doctor doctor = doctorRepository.findById(doctorId)

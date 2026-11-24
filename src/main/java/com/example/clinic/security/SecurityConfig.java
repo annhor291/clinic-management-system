@@ -63,7 +63,6 @@ public class SecurityConfig {
                                 "/api/v1/auth/refresh",
                                 "/api/v1/auth/forgot-password",
                                 "/api/v1/auth/reset-password",
-                                "/api/v1/auth/reset-password",
                                 "/ws/**",          // handshake WebSocket; JWT được kiểm tra ở frame STOMP CONNECT
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
@@ -81,6 +80,9 @@ public class SecurityConfig {
                         // API chỉ ADMIN được dùng
                         .requestMatchers("/api/v1/dashboard/**")
                         .hasRole("ADMIN")
+
+                        // Mọi tài khoản đã đăng nhập xem được hồ sơ tài khoản của chính mình
+                        .requestMatchers(HttpMethod.GET, "/api/v1/users/me").authenticated()
 
                         // API quản lý user chỉ dành cho ADMIN
                         .requestMatchers("/api/v1/users/**")
@@ -151,6 +153,22 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/v1/specialties/**")
                         .hasRole("ADMIN")
+
+                        // Lịch hẹn: xác nhận chỉ lễ tân/admin; hoàn thành, không đến do bác sĩ/lễ tân/admin; tìm kiếm chung chỉ lễ tân/admin
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/appointments/*/confirm")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST")
+
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/appointments/*/complete", "/api/v1/appointments/*/no-show")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST", "DOCTOR")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/appointments/search")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/appointments/patient/**")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST", "PATIENT")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/appointments/doctor/**")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST", "DOCTOR")
 
                         .requestMatchers("/api/v1/appointments/**")
                         .hasAnyRole("ADMIN", "RECEPTIONIST", "DOCTOR", "PATIENT")

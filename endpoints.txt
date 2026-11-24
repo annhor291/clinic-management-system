@@ -1,0 +1,137 @@
+﻿AppointmentController.java:24: @RequestMapping("/api/v1/appointments")
+AppointmentController.java:26: public class AppointmentController {
+AppointmentController.java:33: @GetMapping("/{id}")
+AppointmentController.java:41: @GetMapping("/code/{bookingCode}")
+AppointmentController.java:50: @GetMapping("/patient/{patientId}")
+AppointmentController.java:63: @GetMapping("/doctor/{doctorId}")
+AppointmentController.java:76: @GetMapping("/search")
+AppointmentController.java:95: @PostMapping
+AppointmentController.java:107: @PutMapping("/{id}/confirm")
+AppointmentController.java:115: @PutMapping("/{id}/complete")
+AppointmentController.java:123: @PutMapping("/{id}/no-show")
+AppointmentController.java:131: @PutMapping("/{id}/cancel")
+AppointmentController.java:142: @PutMapping("/{id}/reschedule")
+AppointmentController.java:153: @GetMapping("/{id}/suggestions")
+AuditLogController.java:13: @RequestMapping("/api/v1/audit-logs")
+AuditLogController.java:15: public class AuditLogController {
+AuditLogController.java:20: @GetMapping("/target/{entityType}/{entityId}")
+AuditLogController.java:31: @GetMapping("/search")
+AuthController.java:16: @RequestMapping("/api/v1/auth")
+AuthController.java:18: public class AuthController {
+AuthController.java:25: @PostMapping("/register")
+AuthController.java:37: @PostMapping("/login")
+AuthController.java:47: @PostMapping("/google")
+AuthController.java:57: @PostMapping("/refresh")
+AuthController.java:67: @PostMapping("/logout")
+AuthController.java:79: @PostMapping("/forgot-password")
+AuthController.java:92: @PostMapping("/reset-password")
+AuthController.java:104: @PostMapping("/change-password")
+ClinicController.java:13: @RequestMapping("/api/v1/clinic")
+ClinicController.java:15: public class ClinicController {
+ClinicController.java:20: @GetMapping
+DashboardController.java:17: @RequestMapping("/api/v1/dashboard")
+DashboardController.java:19: public class DashboardController {
+DashboardController.java:25: @GetMapping
+DashboardController.java:44: @GetMapping("/monthly")
+DoctorController.java:16: @RequestMapping("/api/v1/doctors")
+DoctorController.java:18: public class DoctorController {
+DoctorController.java:24: @GetMapping
+DoctorController.java:36: @GetMapping("/me")
+DoctorController.java:44: @GetMapping("/{id}")
+DoctorController.java:53: @GetMapping("/user/{userId}")
+DoctorController.java:61: @PostMapping
+DoctorController.java:74: @PutMapping("/{id}")
+DoctorController.java:85: @PutMapping("/{id}/active")
+DoctorController.java:93: @PutMapping("/{id}/deactive")
+DoctorLeaveRequestController.java:16: @RequestMapping("/api/v1/work-schedule/leave-requests")
+DoctorLeaveRequestController.java:18: public class DoctorLeaveRequestController {
+DoctorLeaveRequestController.java:23: @PostMapping
+DoctorLeaveRequestController.java:33: @GetMapping("/me")
+DoctorLeaveRequestController.java:42: @GetMapping("/pending")
+DoctorLeaveRequestController.java:51: @GetMapping("/doctor/{doctorId}")
+DoctorLeaveRequestController.java:61: @GetMapping("/{id}")
+DoctorLeaveRequestController.java:68: @PutMapping("/{id}/approve")
+DoctorLeaveRequestController.java:75: @PutMapping("/{id}/reject")
+DoctorScheduleController.java:19: @RequestMapping("/api/v1/doctor-schedules")
+DoctorScheduleController.java:21: public class DoctorScheduleController {
+DoctorScheduleController.java:27: @GetMapping("/{id}")
+DoctorScheduleController.java:35: @GetMapping("/doctor/{doctorId}")
+DoctorScheduleController.java:49: @GetMapping("/doctor/{doctorId}/weekly")
+DoctorScheduleController.java:61: @PostMapping
+DoctorScheduleController.java:73: @PutMapping("/{id}/deactivate")
+DoctorScheduleController.java:81: @PutMapping("/{id}/activate")
+DoctorScheduleController.java:90: @DeleteMapping("/{id}")
+DoctorScheduleController.java:98: @GetMapping("/{id}/queue-status")
+DoctorWeeklyRegistrationController.java:16: @RequestMapping("/api/v1/work-schedule/registrations")
+DoctorWeeklyRegistrationController.java:18: public class DoctorWeeklyRegistrationController {
+DoctorWeeklyRegistrationController.java:24: @PostMapping
+DoctorWeeklyRegistrationController.java:35: @GetMapping("/me")
+DoctorWeeklyRegistrationController.java:45: @GetMapping("/pending")
+DoctorWeeklyRegistrationController.java:55: @GetMapping("/doctor/{doctorId}")
+DoctorWeeklyRegistrationController.java:65: @GetMapping("/{id}")
+DoctorWeeklyRegistrationController.java:72: @PutMapping("/{id}/approve")
+DoctorWeeklyRegistrationController.java:79: @PutMapping("/{id}/reject")
+NotificationController.java:15: @RequestMapping("/api/v1/notifications")
+NotificationController.java:17: public class NotificationController {
+NotificationController.java:21: @GetMapping
+NotificationController.java:30: @GetMapping("/unread-count")
+NotificationController.java:35: @PutMapping("/{id}/read")
+NotificationController.java:41: @PutMapping("/read-all")
+PatientController.java:19: @RequestMapping("/api/v1/patients")
+PatientController.java:21: public class PatientController {
+PatientController.java:27: @GetMapping
+PatientController.java:39: @GetMapping("/me")
+PatientController.java:47: @GetMapping("/{id}")
+PatientController.java:62: @GetMapping("/user/{userId}")
+PatientController.java:70: @PostMapping
+PatientController.java:83: @PutMapping("/{id}")
+PatientController.java:93: @PostMapping("/me")
+PatientController.java:100: @PutMapping("/me")
+PatientController.java:108: @DeleteMapping("/{id}")
+PatientController.java:116: @PostMapping("/managed")
+PatientController.java:127: @GetMapping("/managed")
+PaymentController.java:20: @RequestMapping("/api/v1/payments")
+PaymentController.java:23: public class PaymentController {
+PaymentController.java:30: @PostMapping
+PaymentController.java:49: @GetMapping("/vnpay-ipn")
+PaymentController.java:61: @GetMapping("/{transactionCode}")
+PaymentController.java:68: @PostMapping("/{id}/refund")
+PaymentController.java:69: @PreAuthorize("hasRole('ADMIN')")
+SpecialtyController.java:18: @RequestMapping("/api/v1/specialties")
+SpecialtyController.java:20: public class SpecialtyController {
+SpecialtyController.java:26: @GetMapping("/all")
+SpecialtyController.java:34: @GetMapping
+SpecialtyController.java:48: @GetMapping("/{id}")
+SpecialtyController.java:57: @PostMapping
+SpecialtyController.java:70: @PutMapping("/{id}")
+SpecialtyController.java:81: @DeleteMapping("/{id}")
+TimeSlotController.java:15: @RequestMapping("/api/v1/time-slots")
+TimeSlotController.java:17: public class TimeSlotController {
+TimeSlotController.java:23: @GetMapping("/{id}")
+TimeSlotController.java:31: @GetMapping("/doctor/{doctorId}")
+TimeSlotController.java:42: @GetMapping("/doctor/{doctorId}/available")
+TimeSlotController.java:53: @GetMapping("/doctor/{doctorId}/available/range")
+TriageController.java:16: @RequestMapping("/api/v1/triage")
+TriageController.java:18: public class TriageController {
+TriageController.java:25: @PostMapping("/next")
+UserController.java:19: @RequestMapping("/api/v1/users")
+UserController.java:21: public class UserController {
+UserController.java:25: @GetMapping
+UserController.java:38: @GetMapping("/me")
+UserController.java:44: @GetMapping("/statistics")
+UserController.java:50: @GetMapping("/{id}")
+UserController.java:56: @PostMapping
+UserController.java:62: @PutMapping("/{id}")
+UserController.java:69: @PutMapping("/{id}/role")
+UserController.java:76: @PutMapping("/{id}/active")
+UserController.java:82: @PutMapping("/{id}/deactive")
+UserController.java:88: @PutMapping("/{id}/lock")
+UserController.java:94: @PutMapping("/{id}/unlock")
+UserController.java:100: @PutMapping("/{id}/reset-password")
+UserController.java:107: @DeleteMapping("/{id}")
+UserController.java:115: @PutMapping("/active")
+UserController.java:121: @PutMapping("/deactive")
+UserController.java:127: @DeleteMapping
+WorkScheduleAuditLogController.java:12: @RequestMapping("/api/v1/work-schedule/audit-logs")
+WorkScheduleAuditLogController.java:14: public class WorkScheduleAuditLogController {
+WorkScheduleAuditLogController.java:19: @GetMapping("/doctor/{doctorId}")

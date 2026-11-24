@@ -4,6 +4,8 @@ import com.example.clinic.entity.enums.AppointmentStatus;
 import com.example.clinic.entity.enums.CancelledBy;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -57,6 +59,7 @@ public class Appointment {
     private LocalDateTime appointmentTime;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
     private AppointmentStatus status = AppointmentStatus.PENDING;
@@ -72,6 +75,7 @@ public class Appointment {
     private LocalDateTime cancelledAt;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "cancelled_by", length = 20)
     private CancelledBy cancelledBy;
 

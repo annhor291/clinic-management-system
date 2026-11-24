@@ -71,12 +71,19 @@ public class QueueStatusIntegrationTest extends BaseIntegrationTest {
                 .user(patientUser).fullName("Bệnh nhân Queue Test").build());
 
         // Ca làm việc "hôm nay", bắt đầu từ 10 phút trước — mô phỏng ca đang diễn ra
-        LocalTime shiftStart = LocalTime.now().minusMinutes(10);
+        LocalTime now = LocalTime.now();
+        LocalTime shiftStart = now.minusMinutes(10);
+        if (shiftStart.isAfter(now)) {
+            shiftStart = LocalTime.MIDNIGHT;                 // vừa qua nửa đêm: lùi về 00:00 cùng ngày
+        }
+            if (shiftStart.isAfter(LocalTime.of(22, 0))) {
+            shiftStart = LocalTime.of(22, 0);                // chừa chỗ cho 3 slot × 30 phút trong cùng ngày
+        }
         schedule = scheduleRepository.save(DoctorSchedule.builder()
                 .doctor(doctor)
                 .workDate(LocalDate.now())
                 .startTime(shiftStart)
-                .endTime(shiftStart.plusHours(2))
+                .endTime(shiftStart.plusMinutes(90))
                 .slotDurationMinutes(30)
                 .shiftType(ShiftType.CUSTOM)
                 .active(true)

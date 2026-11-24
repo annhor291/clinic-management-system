@@ -3,6 +3,8 @@ package com.example.clinic.entity;
 import com.example.clinic.entity.enums.SlotStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -57,6 +59,7 @@ public class TimeSlot {
     private LocalTime endTime;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
     private SlotStatus status = SlotStatus.AVAILABLE;

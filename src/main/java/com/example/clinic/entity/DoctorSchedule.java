@@ -3,6 +3,8 @@ package com.example.clinic.entity;
 import com.example.clinic.entity.enums.ShiftType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -49,6 +51,7 @@ public class DoctorSchedule {
     private Integer slotDurationMinutes = 30;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "shift_type", nullable = false, length = 10)
     @Builder.Default
     private ShiftType shiftType = ShiftType.CUSTOM;

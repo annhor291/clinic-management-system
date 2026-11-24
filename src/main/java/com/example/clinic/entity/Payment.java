@@ -3,6 +3,8 @@
     import com.example.clinic.entity.enums.PaymentStatus;
     import jakarta.persistence.*;
     import lombok.*;
+    import org.hibernate.annotations.JdbcTypeCode;
+    import org.hibernate.type.SqlTypes;
 
     import java.math.BigDecimal;
     import java.time.LocalDateTime;
@@ -53,6 +55,7 @@
         private BigDecimal amount;
 
         @Enumerated(EnumType.STRING)
+        @JdbcTypeCode(SqlTypes.VARCHAR)
         @Column(name = "status", nullable = false, length = 20)
         @Builder.Default
         private PaymentStatus status = PaymentStatus.PENDING;

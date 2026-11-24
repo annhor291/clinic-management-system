@@ -3,6 +3,8 @@ package com.example.clinic.entity;
 import com.example.clinic.entity.enums.ShiftType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.DayOfWeek;
 
@@ -31,10 +33,12 @@ public class DoctorWeeklyRegistrationDay {
     private DoctorWeeklyRegistration registration;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "day_of_week", nullable = false, length = 10)
     private DayOfWeek dayOfWeek;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "shift_type", nullable = false, length = 10)
     private ShiftType shiftType;
 }

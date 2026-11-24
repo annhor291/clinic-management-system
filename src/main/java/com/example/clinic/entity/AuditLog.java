@@ -3,6 +3,8 @@ package com.example.clinic.entity;
 import com.example.clinic.entity.enums.AuditActionType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -31,6 +33,7 @@ public class AuditLog {
     private User user;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "action", nullable = false, length = 50)
     private AuditActionType action;
 

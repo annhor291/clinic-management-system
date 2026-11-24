@@ -4,6 +4,8 @@ import com.example.clinic.entity.enums.LeaveStatus;
 import com.example.clinic.entity.enums.LeaveType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -33,6 +35,7 @@ public class DoctorLeaveRequest {
     private Doctor doctor;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "type", nullable = false, length = 20)
     private LeaveType type;
 
@@ -46,6 +49,7 @@ public class DoctorLeaveRequest {
     private String reason;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
     private LeaveStatus status = LeaveStatus.PENDING;

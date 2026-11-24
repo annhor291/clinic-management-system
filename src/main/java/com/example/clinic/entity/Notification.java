@@ -4,6 +4,8 @@ import com.example.clinic.entity.enums.NotificationStatus;
 import com.example.clinic.entity.enums.NotificationType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -41,6 +43,7 @@ public class Notification {
     private Appointment appointment;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "type", nullable = false, length = 30)
     private NotificationType type;
 
@@ -51,6 +54,7 @@ public class Notification {
     private String content;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
     private NotificationStatus status = NotificationStatus.PENDING;
