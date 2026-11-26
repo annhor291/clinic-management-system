@@ -1,6 +1,8 @@
 package com.example.clinic.mapper;
 
 import com.example.clinic.dto.response.AppointmentResponse;
+import com.example.clinic.dto.response.DoctorAppointmentResponse;
+import com.example.clinic.dto.response.PatientAppointmentResponse;
 import com.example.clinic.entity.Appointment;
 import com.example.clinic.entity.Payment;
 import com.example.clinic.entity.enums.AppointmentStatus;
@@ -65,6 +67,49 @@ public class AppointmentMapper {
         }
 
         return builder.build();
+    }
+
+    public PatientAppointmentResponse toPatientView(AppointmentResponse r) {
+        return PatientAppointmentResponse.builder()
+                .id(r.getId()).bookingCode(r.getBookingCode())
+                .patientId(r.getPatientId()).patientName(r.getPatientName())
+                .doctorId(r.getDoctorId()).doctorName(r.getDoctorName())
+                .specialtyName(r.getSpecialtyName())
+                .timeSlotId(r.getTimeSlotId())
+                .appointmentDate(r.getAppointmentDate())
+                .startTime(r.getStartTime()).endTime(r.getEndTime())
+                .appointmentTime(r.getAppointmentTime())
+                .status(r.getStatus()).note(r.getNote())
+                .cancellationReason(r.getCancellationReason())
+                .cancelledAt(r.getCancelledAt()).cancelledBy(r.getCancelledBy())
+                .cancelledByClinic(r.isCancelledByClinic())
+                .rescheduledFromId(r.getRescheduledFromId())
+                .rescheduledFromBookingCode(r.getRescheduledFromBookingCode())
+                .queueNumber(r.getQueueNumber())
+                .estimatedTimeLabel(r.getEstimatedTimeLabel())
+                .arrivalNote(r.getArrivalNote())
+                .delayed(r.isDelayed()).delayMessage(r.getDelayMessage())
+                .paymentStatus(r.getPaymentStatus())
+                .createdAt(r.getCreatedAt())
+                .build();
+    }
+
+    public DoctorAppointmentResponse toDoctorView(AppointmentResponse r) {
+        return DoctorAppointmentResponse.builder()
+                .id(r.getId()).bookingCode(r.getBookingCode())
+                .patientId(r.getPatientId()).patientName(r.getPatientName())
+                .patientPhone(r.getPatientPhone())
+                .doctorId(r.getDoctorId()).specialtyName(r.getSpecialtyName())
+                .appointmentDate(r.getAppointmentDate())
+                .startTime(r.getStartTime()).endTime(r.getEndTime())
+                .appointmentTime(r.getAppointmentTime())
+                .queueNumber(r.getQueueNumber())
+                .status(r.getStatus()).note(r.getNote())
+                .cancellationReason(r.getCancellationReason())
+                .cancelledAt(r.getCancelledAt()).cancelledBy(r.getCancelledBy())
+                .cancelledByClinic(r.isCancelledByClinic())
+                .delayed(r.isDelayed())
+                .build();
     }
 
     // Câu chữ chuẩn — khung giờ chỉ mang tính dự kiến, không cam kết tuyệt đối,

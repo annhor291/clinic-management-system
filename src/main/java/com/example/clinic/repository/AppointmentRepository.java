@@ -53,6 +53,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     boolean existsByPatientId(Long patientId);
 
+    // Lịch hẹn của nhiều hồ sơ bệnh nhân cùng lúc (bản thân + người thân), có phân trang
+    Page<Appointment> findByPatientIdInOrderByAppointmentTimeDesc(
+            java.util.Collection<Long> patientIds, Pageable pageable);
+
     boolean existsByDoctorUserIdAndPatientIdAndStatusIn(
             Long doctorUserId, Long patientId, Collection<AppointmentStatus> statuses);
 

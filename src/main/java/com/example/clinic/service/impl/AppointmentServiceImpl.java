@@ -208,6 +208,40 @@ public class AppointmentServiceImpl implements AppointmentService {
         return PageResponse.of(result);
     }
 
+    // ===== LỊCH HẸN CỦA TÔI (theo vai trò người đăng nhập) =====
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<AppointmentResponse> getMyAppointments(int page, int size) {
+        Long userId = SecurityUtil.getCurrentUserId();
+
+        if (SecurityUtil.isPatient()) {
+            // Gồm hồ sơ của chính mình và các hồ sơ người thân đang quản lý
+            List<Long> patientIds = new java.util.ArrayList<>();
+            patientRepository.findByUserId(userId).ifPresent(p -> patientIds.add(p.getId()));
+            patientRepository.findByManagedByIdAndUserIsNull(userId)
+                    .forEach(p -> patientIds.add(p.getId()));
+
+            if (patientIds.isEmpty()) {
+                // Chưa có hồ sơ nào → chưa có lịch hẹn
+                return PageResponse.of(Page.<AppointmentResponse>empty(PageRequest.of(page, size)));
+            }
+            Page<AppointmentResponse> result = appointmentRepository
+                    .findByPatientIdInOrderByAppointmentTimeDesc(patientIds, PageRequest.of(page, size))
+                    .map(appointmentMapper::toResponse);
+            return PageResponse.of(result);
+        }
+
+        if (SecurityUtil.isDoctor()) {
+            Doctor doctor = doctorRepository.findByUserId(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Tài khoản này chưa có hồ sơ bác sĩ"));
+            return getByDoctor(doctor.getId(), page, size);
+        }
+
+        throw new AccessDeniedException(
+                "Chỉ bệnh nhân và bác sĩ có danh sách lịch hẹn cá nhân; admin/lễ tân dùng chức năng tìm kiếm");
+    }
+
     // ===== TÌM KIẾM LỊCH HẸN (ADMIN) =====
     @Override
     @Transactional(readOnly = true)

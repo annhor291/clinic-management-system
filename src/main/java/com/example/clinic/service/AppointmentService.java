@@ -60,4 +60,6 @@ public interface AppointmentService {
     // DoctorLeaveRequestService khi duyệt đơn nghỉ.
     // Phòng khám chủ động hủy (bác sĩ nghỉ, ngừng làm việc...). Không áp quy tắc "hủy trước X giờ"; slot bị khóa.
     AppointmentResponse cancelByClinic(Long id, String reason);
+
+    PageResponse<AppointmentResponse> getMyAppointments(int page, int size);
 }
