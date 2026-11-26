@@ -109,6 +109,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/patients/user/**")
                         .hasAnyRole("ADMIN", "RECEPTIONIST")
 
+                        // Danh sách / tìm kiếm toàn bộ bệnh nhân: bác sĩ không được dùng
+                        .requestMatchers(HttpMethod.GET, "/api/v1/patients")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST")
+
                         // Xem chi tiết bệnh nhân
                         .requestMatchers(HttpMethod.GET, "/api/v1/patients/**")
                         .hasAnyRole("ADMIN", "RECEPTIONIST", "DOCTOR")

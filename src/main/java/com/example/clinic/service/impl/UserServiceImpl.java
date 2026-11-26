@@ -68,9 +68,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponse create(UserCreateRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
-            throw new DuplicateResourceException("Username đã tồn tại");
-        }
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new DuplicateResourceException("Email đã tồn tại");
         }
@@ -94,10 +92,6 @@ public class UserServiceImpl implements UserService {
     public UserResponse update(Long id, UserUpdateRequest request) {
         User user = findActiveByIdOrThrow(id);
 
-        if (!user.getUsername().equals(request.getUsername())
-                && userRepository.existsByUsername(request.getUsername())) {
-            throw new DuplicateResourceException("Username đã tồn tại");
-        }
         if (!user.getEmail().equals(request.getEmail())
                 && userRepository.existsByEmail(request.getEmail())) {
             throw new DuplicateResourceException("Email đã tồn tại");

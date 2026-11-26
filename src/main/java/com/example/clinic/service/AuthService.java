@@ -7,7 +7,9 @@ import com.example.clinic.dto.response.AuthResponse;
 
 public interface AuthService {
     // Đăng ký tài khoản mới
-    AuthResponse register(RegisterRequest request);
+    void register(RegisterRequest request);
+
+    void verifyEmail(String token);
 
     // Đăng nhập và trả về JWT token
     AuthResponse login(LoginRequest request);
@@ -15,7 +17,7 @@ public interface AuthService {
     // Đăng nhập bằng google
     AuthResponse loginWithGoogle(String idToken);
 
-    // Đăng nhâ trả về refresh token kèm theo
+    // Đăng nhâp trả về refresh token kèm theo
     AuthResponse refreshToken(String refreshToken);
 
     // Đăng xuất

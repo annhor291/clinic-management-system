@@ -3,13 +3,17 @@ package com.example.clinic.controller;
 import com.example.clinic.dto.request.*;
 import com.example.clinic.dto.response.ApiResponse;
 import com.example.clinic.dto.response.AuthResponse;
+import com.example.clinic.security.LoginAttemptService;
 import com.example.clinic.service.AuthService;
 import com.example.clinic.service.EmailService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,27 +22,43 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final LoginAttemptService loginAttemptService;
     private final EmailService emailService;
 
     // POST /api/v1/auth/register
     // Đăng ký tài khoản mới — không cần token
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<AuthResponse>> register(
-            @Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<ApiResponse<Void>> register(@Valid @RequestBody RegisterRequest request) {
+        authService.register(request);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.success(
+                "Nếu thông tin hợp lệ, chúng tôi đã gửi email xác minh. "
+                        + "Vui lòng kiểm tra hộp thư (kể cả thư rác) để hoàn tất đăng ký."));
+    }
 
-        AuthResponse response = authService.register(request);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Đăng ký thành công", response));
+    @PostMapping("/verify-email")
+    public ResponseEntity<ApiResponse<Void>> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        authService.verifyEmail(request.token());
+        return ResponseEntity.ok(ApiResponse.success("Xác minh email thành công. Bạn có thể đăng nhập."));
     }
 
     // POST /api/v1/auth/login
     // Đăng nhập — không cần token, trả về JWT token
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(
-            @Valid @RequestBody LoginRequest request) {
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest) {
 
-        AuthResponse response = authService.login(request);
+        String ip = httpRequest.getRemoteAddr();
+        loginAttemptService.checkAllowed(ip, request.getEmail());
+
+        AuthResponse response;
+        try {
+            response = authService.login(request);
+        } catch (BadCredentialsException | UsernameNotFoundException e) {
+            loginAttemptService.recordFailure(ip, request.getEmail());
+            throw e;
+        }
+        loginAttemptService.recordSuccess(ip, request.getEmail());
         return ResponseEntity.ok(
                 ApiResponse.success("Đăng nhập thành công", response));
     }

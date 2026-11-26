@@ -18,15 +18,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.email = :email AND u.deletedAt IS NULL")
     Optional<User> findByEmail(@Param("email") String email);
 
-    @Query("SELECT u FROM User u WHERE u.username = :username AND u.deletedAt IS NULL")
-    Optional<User> findByUsername(@Param("username") String username);
 
     // Email/username của user đã xoá mềm được coi như "trống" để có thể tạo lại
     @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.email = :email AND u.deletedAt IS NULL")
     boolean existsByEmail(@Param("email") String email);
 
-    @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.username = :username AND u.deletedAt IS NULL")
-    boolean existsByUsername(@Param("username") String username);
+    Optional<User> findByVerificationToken(String verificationToken);
 
     // Tìm user theo reset token
     Optional<User> findByResetToken(String resetToken);

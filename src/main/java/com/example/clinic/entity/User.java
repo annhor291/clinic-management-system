@@ -34,7 +34,7 @@ public class User implements UserDetails {
     @EqualsAndHashCode.Include
     private Long id;
 
-    @Column(name = "username", nullable = false, unique = true, length = 100)
+    @Column(name = "username", nullable = false, length = 100)
     private String username;
 
     @Column(name = "password", nullable = false)
@@ -56,6 +56,16 @@ public class User implements UserDetails {
     // Reset password token
     @Column(name = "reset_token")
     private String resetToken;
+
+    @Column(name = "email_verified", nullable = false)
+    @Builder.Default
+    private boolean emailVerified = true;
+
+    @Column(name = "verification_token")
+    private String verificationToken;
+
+    @Column(name = "verification_token_expiry")
+    private LocalDateTime verificationTokenExpiry;
 
     @Column(name = "reset_token_expiry")
     private LocalDateTime resetTokenExpiry;
@@ -101,6 +111,9 @@ public class User implements UserDetails {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
     }
+
+    // Tên hiển thị (lưu ở cột username). Không dùng getUsername() vì UserDetails bắt nó trả về email.
+    public String getDisplayName() { return username; }
 
     // Tự động cập nhật updatedAt ngay trước khi UPDATE vào database
     @PreUpdate

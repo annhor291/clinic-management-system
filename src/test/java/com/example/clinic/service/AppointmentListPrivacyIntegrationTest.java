@@ -107,4 +107,21 @@ public class AppointmentListPrivacyIntegrationTest extends BaseIntegrationTest {
         assertThat(appointmentService.getByDoctor(doctor.getId(), 0, 10)).isNotNull();
         assertThat(appointmentService.getByPatient(patient.getId(), 0, 10)).isNotNull();
     }
+
+    @Autowired private PatientService patientService;
+
+    @Test
+    void doctor_cannotViewPatientWithoutAppointment() {
+        TestSecurityHelper.loginAs(doctorUser);
+
+        assertThatThrownBy(() -> patientService.getById(patient.getId()))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void admin_canViewAnyPatient() {
+        TestSecurityHelper.loginAs(adminUser);
+
+        assertThat(patientService.getById(patient.getId())).isNotNull();
+    }
 }

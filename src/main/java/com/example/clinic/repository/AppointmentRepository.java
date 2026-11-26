@@ -17,6 +17,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -49,6 +50,11 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     boolean existsByTimeSlotIdAndStatusNotIn(Long timeSlotId, List<AppointmentStatus> excludedStatuses);
 
     Optional<Appointment> findByTimeSlotIdAndStatusIn(Long timeSlotId, List<AppointmentStatus> statuses);
+
+    boolean existsByPatientId(Long patientId);
+
+    boolean existsByDoctorUserIdAndPatientIdAndStatusIn(
+            Long doctorUserId, Long patientId, Collection<AppointmentStatus> statuses);
 
     // Tìm kiếm lịch hẹn có pagination + filter — dùng cho Admin dashboard
     @Query("""
@@ -222,7 +228,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Query("SELECT a FROM Appointment a WHERE a.id = :id")
     Optional<Appointment> findByIdForUpdate(@Param("id") Long id);
 
-    boolean existsByPatientId(Long patientId);
 
     // Lịch còn hiệu lực của bác sĩ trong khoảng [fromTime, toTime)
     @Query("""

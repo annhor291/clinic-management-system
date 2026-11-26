@@ -8,6 +8,7 @@ import com.example.clinic.dto.response.PageResponse;
 import com.example.clinic.dto.response.PatientResponse;
 import com.example.clinic.entity.Patient;
 import com.example.clinic.entity.User;
+import com.example.clinic.entity.enums.AppointmentStatus;
 import com.example.clinic.exception.DuplicateResourceException;
 import com.example.clinic.exception.ResourceNotFoundException;
 import com.example.clinic.repository.AppointmentRepository;
@@ -21,8 +22,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -54,6 +58,17 @@ public class PatientServiceImpl implements PatientService {
     @Transactional(readOnly = true)
     public PatientResponse getById(Long id) {
         Patient patient = findByIdOrThrow(id);
+
+        // Bác sĩ chỉ xem được hồ sơ bệnh nhân đã có lịch hẹn với chính mình
+        if (SecurityUtil.isDoctor()) {
+            boolean hasRelation = appointmentRepository.existsByDoctorUserIdAndPatientIdAndStatusIn(
+                    SecurityUtil.getCurrentUserId(), id,
+                    List.of(AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED,
+                            AppointmentStatus.COMPLETED, AppointmentStatus.NO_SHOW));
+            if (!hasRelation) {
+                throw new AccessDeniedException("Bạn chỉ có thể xem hồ sơ bệnh nhân đã có lịch hẹn với mình");
+            }
+        }
         return patientMapper.toResponse(patient);
     }
 
@@ -97,6 +112,11 @@ public class PatientServiceImpl implements PatientService {
         patient.setUser(user);
 
         Patient saved = patientRepository.save(patient);
+
+        // Tên tài khoản = họ tên trong hồ sơ chính chủ
+        user.setUsername(saved.getFullName());
+        userRepository.save(user);
+
         return patientMapper.toResponse(saved);
     }
 
@@ -116,6 +136,11 @@ public class PatientServiceImpl implements PatientService {
 
         // Update trực tiếp vào entity → JPA dirty checking tự chạy UPDATE
         patientMapper.updateEntity(patient, request);
+        // Chỉ hồ sơ chính chủ (có user) mới đồng bộ; hồ sơ người thân (user = null) thì bỏ qua
+        if (patient.getUser() != null && request.getFullName() != null) {
+            patient.getUser().setUsername(patient.getFullName());
+            userRepository.save(patient.getUser());
+        }
         Patient saved = patientRepository.save(patient);
         return patientMapper.toResponse(saved);
     }

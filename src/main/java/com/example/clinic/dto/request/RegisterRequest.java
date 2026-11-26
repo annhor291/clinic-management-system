@@ -17,10 +17,6 @@ import lombok.NoArgsConstructor;
 // DTO nhận dữ liệu đăng ký từ client
 public class RegisterRequest {
 
-    @NotBlank(message = "Username không được để trống")
-    @Size(min = 3, max = 100, message = "Username phải từ 3 đến 100 ký tự")
-    private String username;
-
     @NotBlank(message = "Email không được để trống")
     @Email(message = "Email không hợp lệ")
     private String email;

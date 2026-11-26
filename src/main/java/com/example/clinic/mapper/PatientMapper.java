@@ -49,7 +49,7 @@ public class PatientMapper {
 
         if (patient.getUser() != null) {
             builder.userId(patient.getUser().getId())
-                    .username(patient.getUser().getUsername())
+                    .username(patient.getUser().getDisplayName())
                     .email(patient.getUser().getEmail())
                     .isManaged(false);
         } else {
