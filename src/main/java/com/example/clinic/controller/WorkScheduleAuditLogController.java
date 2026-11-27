@@ -24,4 +24,13 @@ public class WorkScheduleAuditLogController {
         return ResponseEntity.ok(ApiResponse.success("Lấy log lịch làm việc thành công",
                 auditLogService.getByDoctor(doctorId, page, size)));
     }
+
+    // GET /api/v1/work-schedule/audit-logs?page=0&size=10 — log của tất cả bác sĩ, mới nhất trước
+    @GetMapping
+    public ResponseEntity<ApiResponse<PageResponse<WorkScheduleAuditLogResponse>>> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success("Lấy log lịch làm việc thành công",
+                auditLogService.getAll(page, size)));
+    }
 }

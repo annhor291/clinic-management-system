@@ -59,6 +59,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/register",
+                                "/api/v1/auth/verify-email",
                                 "/api/v1/auth/google",
                                 "/api/v1/auth/refresh",
                                 "/api/v1/auth/forgot-password",
@@ -194,6 +195,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/work-schedule/registrations/pending")
                         .hasAnyRole("ADMIN", "RECEPTIONIST")
 
+                        .requestMatchers(HttpMethod.GET, "/api/v1/work-schedule/registrations")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST")
+
                         .requestMatchers(HttpMethod.GET, "/api/v1/work-schedule/registrations/doctor/**")
                         .hasAnyRole("ADMIN", "RECEPTIONIST")
 
@@ -217,6 +221,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/work-schedule/leave-requests/pending")
                         .hasAnyRole("ADMIN", "RECEPTIONIST")
 
+                        .requestMatchers(HttpMethod.GET, "/api/v1/work-schedule/leave-requests")
+                        .hasAnyRole("ADMIN", "RECEPTIONIST")
+
                         .requestMatchers(HttpMethod.GET, "/api/v1/work-schedule/leave-requests/doctor/**")
                         .hasAnyRole("ADMIN", "RECEPTIONIST")
 
@@ -237,6 +244,9 @@ public class SecurityConfig {
                         .hasRole("ADMIN")
 
                         .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay-ipn").permitAll()
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/payments")
+                        .hasRole("ADMIN")
 
                         .requestMatchers(HttpMethod.GET, "/api/v1/payments/**")
                         .hasAnyRole("PATIENT", "ADMIN", "RECEPTIONIST")

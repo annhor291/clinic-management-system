@@ -3,6 +3,8 @@ package com.example.clinic.service.impl;
 import com.example.clinic.booking.config.BookingProperties;
 import com.example.clinic.booking.event.AppointmentConfirmedEvent;
 import com.example.clinic.dto.request.CreatePaymentRequest;
+import com.example.clinic.dto.response.PageResponse;
+import com.example.clinic.dto.response.PaymentListItemResponse;
 import com.example.clinic.dto.response.PaymentResponse;
 import com.example.clinic.entity.Appointment;
 import com.example.clinic.entity.Payment;
@@ -24,6 +26,9 @@ import com.example.clinic.service.AuditLogService;
 import com.example.clinic.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -156,6 +161,19 @@ public class PaymentServiceImpl implements PaymentService {
                         "Không tìm thấy giao dịch: " + transactionCode));
         validatePermission(payment.getAppointment());
         return paymentMapper.toResponse(payment);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<PaymentListItemResponse> listForAdmin(PaymentStatus status, int page, int size) {
+        if (!SecurityUtil.isAdmin()) {
+            throw new AccessDeniedException("Chỉ quản trị viên được xem danh sách thanh toán");
+        }
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100));
+        Page<Payment> result = (status == null)
+                ? paymentRepository.findAllForAdmin(pageable)
+                : paymentRepository.findAllForAdminByStatus(status, pageable);
+        return PageResponse.of(result.map(paymentMapper::toListItem));
     }
 
 // ===== IPN helpers =====

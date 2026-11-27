@@ -4,6 +4,7 @@ import com.example.clinic.dto.request.LeaveRejectRequest;
 import com.example.clinic.dto.request.LeaveRequestSubmitRequest;
 import com.example.clinic.dto.response.LeaveRequestResponse;
 import com.example.clinic.dto.response.PageResponse;
+import com.example.clinic.entity.enums.LeaveStatus;
 
 public interface DoctorLeaveRequestService {
 
@@ -20,4 +21,6 @@ public interface DoctorLeaveRequestService {
     LeaveRequestResponse approve(Long id);
 
     LeaveRequestResponse reject(Long id, LeaveRejectRequest request);
+
+    PageResponse<LeaveRequestResponse> getAll(LeaveStatus status, int page, int size);
 }

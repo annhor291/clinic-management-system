@@ -5,6 +5,7 @@ import com.example.clinic.dto.request.LeaveRequestSubmitRequest;
 import com.example.clinic.dto.response.ApiResponse;
 import com.example.clinic.dto.response.LeaveRequestResponse;
 import com.example.clinic.dto.response.PageResponse;
+import com.example.clinic.entity.enums.LeaveStatus;
 import com.example.clinic.service.DoctorLeaveRequestService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -77,5 +78,15 @@ public class DoctorLeaveRequestController {
             @PathVariable Long id, @Valid @RequestBody LeaveRejectRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Từ chối đơn nghỉ thành công",
                 leaveRequestService.reject(id, request)));
+    }
+
+    // GET /api/v1/work-schedule/leave-requests?status=PENDING&page=0&size=10
+    @GetMapping
+    public ResponseEntity<ApiResponse<PageResponse<LeaveRequestResponse>>> getAll(
+            @RequestParam(required = false) LeaveStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách đơn nghỉ thành công",
+                leaveRequestService.getAll(status, page, size)));
     }
 }

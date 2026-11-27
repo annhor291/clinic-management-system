@@ -64,4 +64,17 @@ public class WorkScheduleAuditLogServiceImpl implements WorkScheduleAuditLogServ
                 .map(mapper::toResponse);
         return PageResponse.of(result);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<WorkScheduleAuditLogResponse> getAll(int page, int size) {
+        if (!SecurityUtil.isAdminOrReceptionist()) {
+            throw new AccessDeniedException("Bạn không có quyền xem log lịch làm việc");
+        }
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100));
+        Page<WorkScheduleAuditLogResponse> result = logRepository
+                .findAllByOrderByPerformedAtDesc(pageable)
+                .map(mapper::toResponse);
+        return PageResponse.of(result);
+    }
 }

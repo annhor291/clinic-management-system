@@ -5,6 +5,7 @@ import com.example.clinic.dto.request.WeeklyRegistrationRequest;
 import com.example.clinic.dto.response.ApiResponse;
 import com.example.clinic.dto.response.PageResponse;
 import com.example.clinic.dto.response.WeeklyRegistrationResponse;
+import com.example.clinic.entity.enums.RegistrationStatus;
 import com.example.clinic.service.DoctorWeeklyRegistrationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -81,5 +82,16 @@ public class DoctorWeeklyRegistrationController {
             @PathVariable Long id, @Valid @RequestBody RegistrationRejectRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Từ chối đăng ký thành công",
                 registrationService.reject(id, request)));
+    }
+
+    // GET /api/v1/work-schedule/registrations?status=PENDING&page=0&size=10
+    // Admin/Receptionist xem tất cả đăng ký (mới nộp trước)
+    @GetMapping
+    public ResponseEntity<ApiResponse<PageResponse<WeeklyRegistrationResponse>>> getAll(
+            @RequestParam(required = false) RegistrationStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách đăng ký thành công",
+                registrationService.getAll(status, page, size)));
     }
 }

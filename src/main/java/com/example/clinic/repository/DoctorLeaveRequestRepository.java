@@ -21,6 +21,10 @@ public interface DoctorLeaveRequestRepository extends JpaRepository<DoctorLeaveR
 
     Page<DoctorLeaveRequest> findByStatusOrderBySubmittedAtAsc(LeaveStatus status, Pageable pageable);
 
+    Page<DoctorLeaveRequest> findAllByOrderBySubmittedAtDesc(Pageable pageable);
+
+    Page<DoctorLeaveRequest> findByStatusOrderBySubmittedAtDesc(LeaveStatus status, Pageable pageable);
+
     // Tìm các đơn nghỉ ĐÃ DUYỆT của bác sĩ có khoảng thời gian giao với [rangeStart, rangeEnd]
     @Query("""
             SELECT l FROM DoctorLeaveRequest l

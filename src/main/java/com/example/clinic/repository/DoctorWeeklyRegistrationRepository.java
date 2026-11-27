@@ -25,4 +25,8 @@ public interface DoctorWeeklyRegistrationRepository extends JpaRepository<Doctor
 
     Page<DoctorWeeklyRegistration> findByStatusOrderBySubmittedAtAsc(RegistrationStatus status, Pageable pageable);
 
+    Page<DoctorWeeklyRegistration> findAllByOrderBySubmittedAtDesc(Pageable pageable);
+
+    Page<DoctorWeeklyRegistration> findByStatusOrderBySubmittedAtDesc(RegistrationStatus status, Pageable pageable);
+
 }

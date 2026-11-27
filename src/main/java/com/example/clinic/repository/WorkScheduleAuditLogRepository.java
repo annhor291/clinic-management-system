@@ -11,4 +11,6 @@ public interface WorkScheduleAuditLogRepository extends JpaRepository<WorkSchedu
 
     Page<WorkScheduleAuditLog> findByDoctorIdOrderByPerformedAtDesc(Long doctorId, Pageable pageable);
 
+    Page<WorkScheduleAuditLog> findAllByOrderByPerformedAtDesc(Pageable pageable);
+
 }

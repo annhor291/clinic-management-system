@@ -11,4 +11,6 @@ public interface WorkScheduleAuditLogService {
                 String relatedEntityType, Long relatedEntityId);
 
     PageResponse<WorkScheduleAuditLogResponse> getByDoctor(Long doctorId, int page, int size);
+
+    PageResponse<WorkScheduleAuditLogResponse> getAll(int page, int size);
 }

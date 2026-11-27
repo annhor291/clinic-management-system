@@ -2,7 +2,7 @@ package com.example.clinic.entity.enums;
 
 public enum NotificationType {
     APPOINTMENT_BOOKED,       // Đặt lịch thành công
-    APPOINTMENT_CONFIRMED,    // Bác sĩ xác nhận
+    APPOINTMENT_CONFIRMED,    // Lịch được xác nhận (thanh toán thành công hoặc lễ tân/quản trị viên xác nhận)
     APPOINTMENT_CANCELLED,    // Lịch bị huỷ
     APPOINTMENT_COMPLETED,    // Khám xong
     APPOINTMENT_NO_SHOW,

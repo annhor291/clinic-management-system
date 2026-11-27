@@ -5,6 +5,8 @@ import com.example.clinic.TestSecurityHelper;
 import com.example.clinic.dto.request.AppointmentRequest;
 import com.example.clinic.dto.request.CancelRequest;
 import com.example.clinic.dto.request.CreatePaymentRequest;
+import com.example.clinic.dto.response.PageResponse;
+import com.example.clinic.dto.response.PaymentListItemResponse;
 import com.example.clinic.dto.response.PaymentResponse;
 import com.example.clinic.entity.*;
 import com.example.clinic.entity.enums.*;
@@ -646,6 +648,29 @@ public class PaymentIntegrationTest extends BaseIntegrationTest {
         assertThat(applicationEvents.stream(PaymentRefundRequestedEvent.class).count()).isEqualTo(1);
         assertThat(appointmentRepository.findById(appointmentId).orElseThrow().getStatus())
                 .isEqualTo(AppointmentStatus.PENDING);
+    }
+
+    @Test
+    void listForAdmin_shouldReturnPaymentsWithPatientName_andFilterByStatus() {
+        paymentService.createPayment(request(), "127.0.0.1");
+
+        TestSecurityHelper.loginAs(adminUser);
+        PageResponse<PaymentListItemResponse> all = paymentService.listForAdmin(null, 0, 10);
+        assertThat(all.getTotalElements()).isEqualTo(1);
+        PaymentListItemResponse item = all.getContent().get(0);
+        assertThat(item.getPatientName()).isEqualTo("Benh nhan Payment Test");
+        assertThat(item.getPaymentMethod()).isEqualTo("VNPAY");
+        assertThat(item.getStatus()).isEqualTo(PaymentStatus.PENDING);
+
+        assertThat(paymentService.listForAdmin(PaymentStatus.PENDING, 0, 10).getTotalElements()).isEqualTo(1);
+        assertThat(paymentService.listForAdmin(PaymentStatus.SUCCESS, 0, 10).getTotalElements()).isZero();
+    }
+
+    @Test
+    void listForAdmin_shouldRejectNonAdmin() {
+        TestSecurityHelper.loginAs(patientUser);
+        assertThatThrownBy(() -> paymentService.listForAdmin(null, 0, 10))
+                .isInstanceOf(AccessDeniedException.class);
     }
 
 }

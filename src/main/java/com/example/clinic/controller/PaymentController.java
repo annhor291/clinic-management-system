@@ -2,6 +2,8 @@ package com.example.clinic.controller;
 
 import com.example.clinic.dto.request.CreatePaymentRequest;
 import com.example.clinic.dto.response.ApiResponse;
+import com.example.clinic.dto.response.PageResponse;
+import com.example.clinic.dto.response.PaymentListItemResponse;
 import com.example.clinic.dto.response.PaymentResponse;
 import com.example.clinic.entity.enums.PaymentStatus;
 import com.example.clinic.service.PaymentRefundService;
@@ -71,5 +73,16 @@ public class PaymentController {
         PaymentStatus status = paymentRefundService.retryFailedRefund(id);
         return ResponseEntity.ok(ApiResponse.success("Đã gửi lại yêu cầu hoàn tiền",
                 Map.of("status", status.name())));
+    }
+
+    // GET /api/v1/payments?status=SUCCESS&page=0&size=20 — ADMIN xem danh sách giao dịch
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<PageResponse<PaymentListItemResponse>>> list(
+            @RequestParam(required = false) PaymentStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách thanh toán thành công",
+                paymentService.listForAdmin(status, page, size)));
     }
 }

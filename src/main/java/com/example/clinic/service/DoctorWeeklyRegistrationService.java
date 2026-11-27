@@ -4,6 +4,7 @@ import com.example.clinic.dto.request.RegistrationRejectRequest;
 import com.example.clinic.dto.request.WeeklyRegistrationRequest;
 import com.example.clinic.dto.response.PageResponse;
 import com.example.clinic.dto.response.WeeklyRegistrationResponse;
+import com.example.clinic.entity.enums.RegistrationStatus;
 
 public interface DoctorWeeklyRegistrationService {
 
@@ -24,4 +25,7 @@ public interface DoctorWeeklyRegistrationService {
     WeeklyRegistrationResponse approve(Long id);
 
     WeeklyRegistrationResponse reject(Long id, RegistrationRejectRequest request);
+
+    // Admin/Receptionist xem tất cả đăng ký, lọc theo trạng thái nếu có
+    PageResponse<WeeklyRegistrationResponse> getAll(RegistrationStatus status, int page, int size);
 }

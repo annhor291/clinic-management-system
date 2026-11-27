@@ -219,6 +219,20 @@ public class DoctorWeeklyRegistrationServiceImpl implements DoctorWeeklyRegistra
         return mapper.toResponse(saved);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<WeeklyRegistrationResponse> getAll(RegistrationStatus status, int page, int size) {
+        if (!SecurityUtil.isAdminOrReceptionist()) {
+            throw new AccessDeniedException("Bạn không có quyền xem danh sách đăng ký lịch");
+        }
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100));
+        Page<WeeklyRegistrationResponse> result = (status == null
+                ? registrationRepository.findAllByOrderBySubmittedAtDesc(pageable)
+                : registrationRepository.findByStatusOrderBySubmittedAtDesc(status, pageable))
+                .map(mapper::toResponse);
+        return PageResponse.of(result);
+    }
+
     // ===== Private helpers =====
 
     // Validate: T2-T6 bắt buộc có mặt đúng 1 lần, shift phải là MORNING/AFTERNOON/FULL.

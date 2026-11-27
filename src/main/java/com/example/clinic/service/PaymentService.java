@@ -1,7 +1,10 @@
 package com.example.clinic.service;
 
 import com.example.clinic.dto.request.CreatePaymentRequest;
+import com.example.clinic.dto.response.PageResponse;
+import com.example.clinic.dto.response.PaymentListItemResponse;
 import com.example.clinic.dto.response.PaymentResponse;
+import com.example.clinic.entity.enums.PaymentStatus;
 
 import java.util.List;
 import java.util.Map;
@@ -22,4 +25,7 @@ public interface PaymentService {
 
     // Huỷ 1 giao dịch quá hạn (mỗi giao dịch 1 transaction riêng)
     void expireOverduePayment(Long paymentId);
+
+    // Admin xem danh sách giao dịch (mới nhất trước), lọc theo trạng thái nếu có
+    PageResponse<PaymentListItemResponse> listForAdmin(PaymentStatus status, int page, int size);
 }

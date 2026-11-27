@@ -8,8 +8,6 @@ public enum AuditActionType {
     USER_UNLOCKED,
     USER_DELETED,
     USER_PASSWORD_RESET_BY_ADMIN,
-
-    // Chuẩn bị sẵn cho các phase sau (Payment, sửa tay lịch làm việc) — chưa wire
     PAYMENT_CREATED,
     PAYMENT_STATUS_CHANGED,
     SCHEDULE_MANUALLY_EDITED,
