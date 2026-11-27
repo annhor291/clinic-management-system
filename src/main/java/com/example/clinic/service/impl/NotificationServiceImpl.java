@@ -4,15 +4,18 @@ import com.example.clinic.dto.response.NotificationResponse;
 import com.example.clinic.entity.*;
 import com.example.clinic.entity.enums.NotificationStatus;
 import com.example.clinic.entity.enums.NotificationType;
+import com.example.clinic.entity.enums.Role;
 import com.example.clinic.notification.event.NotificationCreatedEvent;
 import com.example.clinic.exception.ResourceNotFoundException;
 import com.example.clinic.repository.AppointmentRepository;
 import com.example.clinic.repository.NotificationRepository;
 import com.example.clinic.repository.PaymentRepository;
+import com.example.clinic.repository.UserRepository;
 import com.example.clinic.service.EmailService;
 import com.example.clinic.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +24,7 @@ import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Locale;
 
 // Chịu trách nhiệm: build nội dung thông báo theo từng loại sự kiện, lưu vào bảng notifications,
@@ -40,6 +44,10 @@ public class NotificationServiceImpl implements NotificationService {
     private final EmailService emailService;
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentRepository paymentRepository;
+    private final UserRepository userRepository;
+
+    @Value("${app.frontend-url:http://localhost:5173}")
+    private String frontendUrl;
 
     @Override
     @Transactional
@@ -74,15 +82,20 @@ public class NotificationServiceImpl implements NotificationService {
 
         String title;
         String content;
+        String emailBody;
         if (appt.isCancelledByClinic()) {
             title = "Phòng khám đã hủy lịch hẹn của bạn";
             content = "Rất tiếc, " + base + " đã bị phòng khám hủy. Lý do: " + reason +
                     ". Bạn có muốn hỗ trợ đặt lịch tương tự không? Hãy mở lịch hẹn này để xem các khung giờ gợi ý.";
+            // Trong app thì bấm thẳng vào thông báo; email cần thêm link để mở đúng lịch hẹn
+            emailBody = content + "<br/><br/><a href=\"" + frontendUrl + "/appointments/" + appt.getId()
+                    + "\">Xem các khung giờ gợi ý</a>";
         } else {
             title = "Lịch hẹn đã bị hủy";
             content = base + " đã bị hủy. Lý do: " + reason;
+            emailBody = content;
         }
-        sendAndPersist(appt, NotificationType.APPOINTMENT_CANCELLED, title, content);
+        sendAndPersist(appt, NotificationType.APPOINTMENT_CANCELLED, title, content, emailBody);
     }
 
     @Override
@@ -175,6 +188,63 @@ public class NotificationServiceImpl implements NotificationService {
         sendAndPersist(appt, NotificationType.PAYMENT_REFUNDED, title, content);
     }
 
+    @Override
+    @Transactional
+    public void notifyWelcome(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với id: " + userId));
+        String title = "Chào mừng bạn đến với phòng khám";
+        String content = "Xin chào " + user.getDisplayName() + ", tài khoản của bạn đã sẵn sàng. "
+                + "Bạn có thể đặt lịch khám trực tuyến, thanh toán và theo dõi lịch hẹn ngay trên hệ thống.";
+
+        Notification notification = notificationRepository.save(Notification.builder()
+                .user(user)
+                .type(NotificationType.WELCOME)
+                .title(title)
+                .content(content)
+                .status(NotificationStatus.PENDING)
+                .scheduledAt(LocalDateTime.now())
+                .build());
+
+        boolean success = emailService.sendEmailSync(user.getEmail(), title, content);
+        if (success) {
+            notification.setStatus(NotificationStatus.SENT);
+            notification.setSentAt(LocalDateTime.now());
+        } else {
+            notification.setStatus(NotificationStatus.FAILED);
+            notification.setErrorMessage("Gửi email thất bại — xem log server để biết chi tiết");
+            notification.setRetryCount(notification.getRetryCount() + 1);
+        }
+        notificationRepository.save(notification);
+
+        eventPublisher.publishEvent(
+                new NotificationCreatedEvent(user.getId(), NotificationResponse.from(notification)));
+    }
+
+    @Override
+    @Transactional
+    public int broadcastGeneral(String title, String content, Role targetRole) {
+        List<User> recipients = userRepository.findBroadcastRecipients(targetRole);
+        LocalDateTime now = LocalDateTime.now();
+
+        // Thông báo trong app, KHÔNG gửi email hàng loạt (dễ bị SMTP giới hạn hoặc coi là spam)
+        List<Notification> saved = notificationRepository.saveAll(recipients.stream()
+                .map(u -> Notification.builder()
+                        .user(u)
+                        .type(NotificationType.GENERAL)
+                        .title(title)
+                        .content(content)
+                        .status(NotificationStatus.SENT)
+                        .scheduledAt(now)
+                        .sentAt(now)
+                        .build())
+                .toList());
+
+        saved.forEach(n -> eventPublisher.publishEvent(
+                new NotificationCreatedEvent(n.getUser().getId(), NotificationResponse.from(n))));
+        return saved.size();
+    }
+
     // ===== Private helpers =====
 
     private Appointment findAppointmentOrThrow(Long id) {
@@ -186,8 +256,14 @@ public class NotificationServiceImpl implements NotificationService {
         return "bác sĩ " + appt.getDoctor().getFullName();
     }
 
-    // Lưu Notification (PENDING) → gửi email đồng bộ → cập nhật SENT/FAILED
     private void sendAndPersist(Appointment appt, NotificationType type, String title, String content) {
+        sendAndPersist(appt, type, title, content, content);
+    }
+
+    // Lưu Notification (PENDING) → gửi email đồng bộ → cập nhật SENT/FAILED
+    // emailBody có thể khác content (vd thêm link), còn content là bản hiển thị trong app
+    private void sendAndPersist(Appointment appt, NotificationType type, String title,
+                                String content, String emailBody) {
         Patient patient = appt.getPatient();
 
         // Người nhận Notification trong hệ thống: chính chủ nếu có, ngược lại là người quản lý hồ sơ
@@ -210,7 +286,7 @@ public class NotificationServiceImpl implements NotificationService {
 
         notification = notificationRepository.save(notification);
 
-        boolean success = emailService.sendEmailSync(recipient.getEmail(), title, content);
+        boolean success = emailService.sendEmailSync(recipient.getEmail(), title, emailBody);
 
         if (success) {
             notification.setStatus(NotificationStatus.SENT);
@@ -231,7 +307,7 @@ public class NotificationServiceImpl implements NotificationService {
         // (không tạo Notification record vì contactEmail không gắn với User thật nào trong hệ thống)
         if (patient.getUser() == null && patient.getContactEmail() != null
                 && !patient.getContactEmail().equalsIgnoreCase(recipient.getEmail())) {
-            emailService.sendEmail(patient.getContactEmail(), title, content);
+            emailService.sendEmail(patient.getContactEmail(), title, emailBody);
         }
     }
 

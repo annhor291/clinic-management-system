@@ -1,5 +1,7 @@
 package com.example.clinic.service;
 
+import com.example.clinic.entity.enums.Role;
+
 import java.time.LocalDateTime;
 
 public interface NotificationService {
@@ -25,4 +27,10 @@ public interface NotificationService {
     void notifyPaymentSucceeded(Long paymentId);
 
     void notifyPaymentRefunded(Long paymentId);
+
+    // Chào mừng người dùng mới (trong app + email)
+    void notifyWelcome(Long userId);
+
+    // Admin gửi thông báo chung trong app; targetRole = null là gửi cho tất cả. Trả về số người nhận
+    int broadcastGeneral(String title, String content, Role targetRole);
 }

@@ -1,8 +1,11 @@
 package com.example.clinic.controller;
 
+import com.example.clinic.dto.request.BroadcastNotificationRequest;
 import com.example.clinic.dto.response.NotificationResponse;
 import com.example.clinic.entity.User;
+import com.example.clinic.service.NotificationService;
 import com.example.clinic.service.UserNotificationService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +20,7 @@ import java.util.Map;
 public class NotificationController {
 
     private final UserNotificationService userNotificationService;
+    private final NotificationService notificationService;
 
     @GetMapping
     public PagedModel<NotificationResponse> list(
@@ -41,5 +45,13 @@ public class NotificationController {
     @PutMapping("/read-all")
     public Map<String, Integer> markAllRead(@AuthenticationPrincipal User user) {
         return Map.of("updated", userNotificationService.markAllRead(user.getId()));
+    }
+
+    // POST /api/v1/notifications/broadcast — ADMIN gửi thông báo chung (trong app)
+    @PostMapping("/broadcast")
+    public Map<String, Integer> broadcast(@Valid @RequestBody BroadcastNotificationRequest request) {
+        int recipients = notificationService.broadcastGeneral(
+                request.getTitle(), request.getContent(), request.getTargetRole());
+        return Map.of("recipients", recipients);
     }
 }

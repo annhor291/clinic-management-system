@@ -7,6 +7,7 @@ import com.example.clinic.dto.response.AppointmentResponse;
 import com.example.clinic.dto.response.PageResponse;
 import com.example.clinic.entity.enums.AppointmentStatus;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -61,5 +62,11 @@ public interface AppointmentService {
     // Phòng khám chủ động hủy (bác sĩ nghỉ, ngừng làm việc...). Không áp quy tắc "hủy trước X giờ"; slot bị khóa.
     AppointmentResponse cancelByClinic(Long id, String reason);
 
+    // Lịch hẹn của tôi, lọc tùy chọn theo ngày và trạng thái (null = không lọc)
+    PageResponse<AppointmentResponse> getMyAppointments(int page, int size, LocalDate date,
+                                                        AppointmentStatus status);
+
     PageResponse<AppointmentResponse> getMyAppointments(int page, int size);
+
+
 }

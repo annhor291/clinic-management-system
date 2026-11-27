@@ -254,6 +254,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/payments")
                         .hasAnyRole("PATIENT", "ADMIN", "RECEPTIONIST")
 
+                        .requestMatchers(HttpMethod.POST, "/api/v1/notifications/broadcast")
+                        .hasRole("ADMIN")
+
                         .requestMatchers("/api/v1/notifications/**").authenticated()
 
                         // Tất cả request còn lại cần xác thực

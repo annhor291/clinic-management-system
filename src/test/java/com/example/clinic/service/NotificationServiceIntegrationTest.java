@@ -3,6 +3,7 @@ package com.example.clinic.service;
 import com.example.clinic.BaseIntegrationTest;
 import com.example.clinic.TestSecurityHelper;
 import com.example.clinic.dto.request.AppointmentRequest;
+import com.example.clinic.dto.response.AppointmentResponse;
 import com.example.clinic.entity.*;
 import com.example.clinic.entity.enums.*;
 import com.example.clinic.repository.*;
@@ -14,6 +15,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -31,6 +33,8 @@ public class NotificationServiceIntegrationTest extends BaseIntegrationTest {
     @Autowired private DoctorScheduleService doctorScheduleService;
     @Autowired private TimeSlotRepository timeSlotRepository;
     @Autowired private NotificationRepository notificationRepository;
+    @Autowired private NotificationService notificationService;
+    @Autowired private AuthService authService;
 
     // Mock EmailService — không gửi email thật, chỉ verify nó được gọi đúng cách
     @MockitoBean private EmailService emailService;
@@ -96,6 +100,70 @@ public class NotificationServiceIntegrationTest extends BaseIntegrationTest {
             assertThat(notifications).isNotEmpty();
             assertThat(notifications.get(0).getType()).isEqualTo(NotificationType.APPOINTMENT_BOOKED);
             assertThat(notifications.get(0).getStatus()).isEqualTo(NotificationStatus.SENT);
+        });
+    }
+
+    @Test
+    void clinicCancel_shouldPutLinkInEmail_butNotInAppContent() {
+        TestSecurityHelper.loginAs(patientUser);
+        TimeSlot slot = timeSlotRepository.findByDoctorIdAndSlotDateAndStatusOrderByStartTimeAsc(
+                doctor.getId(), LocalDate.now().plusDays(1), SlotStatus.AVAILABLE).get(0);
+        AppointmentResponse booked = appointmentService.book(AppointmentRequest.builder()
+                .patientId(patient.getId()).timeSlotId(slot.getId()).build());
+
+        User admin = userRepository.save(User.builder()
+                .username("admin_notif").email("admin_notif@example.com")
+                .password("x").role(Role.ADMIN).provider(AuthProvider.LOCAL).enabled(true).build());
+        TestSecurityHelper.loginAs(admin);
+        appointmentService.cancelByClinic(booked.getId(), "Bác sĩ nghỉ đột xuất");
+
+        verify(emailService, timeout(5000)).sendEmailSync(
+                eq(patientUser.getEmail()),
+                contains("Phòng khám đã hủy lịch hẹn"),
+                contains("/appointments/" + booked.getId()));
+
+        await().atMost(5, SECONDS).untilAsserted(() -> {
+            var list = notificationRepository.findByUserIdOrderByCreatedAtDesc(
+                    patientUser.getId(), PageRequest.of(0, 5)).getContent();
+            var cancelled = list.stream()
+                    .filter(n -> n.getType() == NotificationType.APPOINTMENT_CANCELLED)
+                    .findFirst().orElseThrow();
+            assertThat(cancelled.getContent()).contains("đặt lịch tương tự").doesNotContain("<a href");
+            assertThat(cancelled.getAppointment().getId()).isEqualTo(booked.getId());
+        });
+    }
+
+    @Test
+    void notifyWelcome_shouldCreateWelcomeNotification_andSendEmail() {
+        notificationService.notifyWelcome(patientUser.getId());
+
+        verify(emailService, timeout(5000)).sendEmailSync(
+                eq(patientUser.getEmail()), contains("Chào mừng"), any());
+
+        var list = notificationRepository.findByUserIdOrderByCreatedAtDesc(
+                patientUser.getId(), PageRequest.of(0, 5)).getContent();
+        assertThat(list).hasSize(1);
+        assertThat(list.get(0).getType()).isEqualTo(NotificationType.WELCOME);
+        assertThat(list.get(0).getStatus()).isEqualTo(NotificationStatus.SENT);
+        assertThat(list.get(0).getAppointment()).isNull();
+    }
+
+    @Test
+    void verifyEmail_shouldTriggerWelcomeNotification() {
+        User newcomer = userRepository.save(User.builder()
+                .username("newcomer").email("newcomer@example.com").password("x")
+                .role(Role.PATIENT).provider(AuthProvider.LOCAL).enabled(true)
+                .emailVerified(false)
+                .verificationToken("tok-welcome")
+                .verificationTokenExpiry(LocalDateTime.now().plusHours(1))
+                .build());
+
+        authService.verifyEmail("tok-welcome");
+
+        await().atMost(5, SECONDS).untilAsserted(() -> {
+            var list = notificationRepository.findByUserIdOrderByCreatedAtDesc(
+                    newcomer.getId(), PageRequest.of(0, 5)).getContent();
+            assertThat(list).extracting(n -> n.getType()).contains(NotificationType.WELCOME);
         });
     }
 }

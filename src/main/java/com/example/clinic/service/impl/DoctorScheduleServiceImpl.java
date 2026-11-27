@@ -6,6 +6,7 @@ import com.example.clinic.dto.response.QueueStatusResponse;
 import com.example.clinic.entity.Doctor;
 import com.example.clinic.entity.DoctorSchedule;
 import com.example.clinic.entity.TimeSlot;
+import com.example.clinic.entity.enums.AuditActionType;
 import com.example.clinic.entity.enums.ShiftType;
 import com.example.clinic.entity.enums.SlotStatus;
 import com.example.clinic.exception.DuplicateResourceException;
@@ -15,6 +16,7 @@ import com.example.clinic.repository.DoctorRepository;
 import com.example.clinic.repository.DoctorScheduleRepository;
 import com.example.clinic.repository.TimeSlotRepository;
 import com.example.clinic.security.SecurityUtil;
+import com.example.clinic.service.AuditLogService;
 import com.example.clinic.service.DoctorScheduleService;
 import com.example.clinic.mapper.DoctorScheduleMapper;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,7 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
     private final TimeSlotRepository timeSlotRepository;
     private final DoctorScheduleMapper scheduleMapper;
     private final AppointmentRepository appointmentRepository;
+    private final AuditLogService auditLogService;
 
     // Tạo ca làm việc và tự động sinh các TimeSlot
     @Override
@@ -106,6 +109,10 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
 
         // Load lại schedule với slots để trả về
         savedSchedule.setTimeSlots(slots);
+
+        auditLogService.record(AuditActionType.SCHEDULE_MANUALLY_EDITED, "DOCTOR_SCHEDULE", savedSchedule.getId(),
+                "Tạo ca làm việc thủ công cho bác sĩ " + doctor.getFullName()
+                        + " ngày " + savedSchedule.getWorkDate(), null, null);
         return scheduleMapper.toResponseWithSlots(savedSchedule);
     }
 
@@ -237,7 +244,11 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
             throw new IllegalStateException(
                     "Ca làm việc đã có lịch hẹn. Hãy gửi đơn xin nghỉ để hệ thống hủy lịch và thông báo bệnh nhân");
         }
-        return applyBlock(schedule);
+        DoctorScheduleResponse response = applyBlock(schedule);
+        auditLogService.record(AuditActionType.SCHEDULE_MANUALLY_CANCELLED, "DOCTOR_SCHEDULE", id,
+                "Vô hiệu hóa ca làm việc ngày " + schedule.getWorkDate()
+                        + " của bác sĩ " + schedule.getDoctor().getFullName(), null, null);
+        return response;
     }
 
     // Nội bộ cho DoctorBlockService: lịch hẹn đã được hủy trước đó nên không cần kiểm tra
@@ -282,6 +293,10 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
                     "Không thể xoá ca làm việc vì đã có lịch hẹn được đặt");
         }
 
+        auditLogService.record(AuditActionType.SCHEDULE_MANUALLY_CANCELLED, "DOCTOR_SCHEDULE", id,
+                "Xóa ca làm việc ngày " + schedule.getWorkDate()
+                        + " của bác sĩ " + schedule.getDoctor().getFullName(), null, null);
+
         scheduleRepository.delete(schedule);
     }
 
@@ -307,6 +322,9 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         timeSlotRepository.saveAll(schedule.getTimeSlots());
 
         DoctorSchedule saved = scheduleRepository.save(schedule);
+        auditLogService.record(AuditActionType.SCHEDULE_MANUALLY_EDITED, "DOCTOR_SCHEDULE", id,
+                "Kích hoạt lại ca làm việc ngày " + schedule.getWorkDate()
+                        + " của bác sĩ " + schedule.getDoctor().getFullName(), null, null);
         return scheduleMapper.toResponseWithSlots(saved);
     }
 

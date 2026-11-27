@@ -244,4 +244,36 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Long> findActiveIdsByDoctorBetween(@Param("doctorId") Long doctorId,
                                             @Param("fromTime") LocalDateTime fromTime,
                                             @Param("toTime") LocalDateTime toTime);
+
+    // Lịch hẹn của bác sĩ, lọc tùy chọn theo trạng thái và khoảng thời gian [from, to)
+    @Query("""
+            SELECT a FROM Appointment a
+            WHERE a.doctor.id = :doctorId
+            AND (:status IS NULL OR a.status = :status)
+            AND (:from IS NULL OR a.appointmentTime >= :from)
+            AND (:to IS NULL OR a.appointmentTime < :to)
+            ORDER BY a.appointmentTime DESC
+            """)
+    Page<Appointment> findForDoctorFiltered(
+            @Param("doctorId") Long doctorId,
+            @Param("status") AppointmentStatus status,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            Pageable pageable);
+
+    // Lịch hẹn của nhiều hồ sơ bệnh nhân (bản thân + người thân), lọc tùy chọn như trên
+    @Query("""
+            SELECT a FROM Appointment a
+            WHERE a.patient.id IN :patientIds
+            AND (:status IS NULL OR a.status = :status)
+            AND (:from IS NULL OR a.appointmentTime >= :from)
+            AND (:to IS NULL OR a.appointmentTime < :to)
+            ORDER BY a.appointmentTime DESC
+            """)
+    Page<Appointment> findForPatientsFiltered(
+            @Param("patientIds") Collection<Long> patientIds,
+            @Param("status") AppointmentStatus status,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            Pageable pageable);
 }

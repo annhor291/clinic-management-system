@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -27,6 +28,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // Tìm user theo reset token
     Optional<User> findByResetToken(String resetToken);
+
+    // Người nhận thông báo chung: tài khoản đang hoạt động, đã xác minh email, chưa xóa, không bị khóa.
+    // role = null nghĩa là tất cả vai trò
+    @Query("""
+            SELECT u FROM User u
+            WHERE u.enabled = true AND u.locked = false AND u.deletedAt IS NULL
+            AND u.emailVerified = true
+            AND (:role IS NULL OR u.role = :role)
+            """)
+    List<User> findBroadcastRecipients(@Param("role") Role role);
 
     // Danh sách user có pagination + filter, luôn loại bỏ user đã xoá mềm
     @Query("SELECT u FROM User u WHERE u.deletedAt IS NULL " +

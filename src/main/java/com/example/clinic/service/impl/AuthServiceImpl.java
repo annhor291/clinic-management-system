@@ -8,6 +8,7 @@ import com.example.clinic.entity.User;
 import com.example.clinic.entity.enums.AuthProvider;
 import com.example.clinic.entity.enums.Role;
 import com.example.clinic.exception.*;
+import com.example.clinic.notification.event.UserWelcomeEvent;
 import com.example.clinic.repository.DoctorRepository;
 import com.example.clinic.repository.PatientRepository;
 import com.example.clinic.repository.UserRepository;
@@ -20,6 +21,7 @@ import com.example.clinic.service.RefreshTokenService;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
@@ -44,6 +46,7 @@ public class AuthServiceImpl implements AuthService {
     private final GoogleAuthService googleAuthService;
     private final RefreshTokenService refreshTokenService;
     private final EmailService emailService;
+    private final ApplicationEventPublisher eventPublisher;
     // Tối đa 3 thư đặt lại mật khẩu / 15 phút cho mỗi email — chống gửi thư rác vào hộp thư người khác
     private final RateLimiter forgotPasswordPerEmail = new RateLimiter(3, 15 * 60);
     private final RateLimiter registerPerEmail = new RateLimiter(3, 60 * 60);
@@ -128,6 +131,7 @@ public class AuthServiceImpl implements AuthService {
         user.setVerificationToken(null);
         user.setVerificationTokenExpiry(null);
         userRepository.save(user);
+        eventPublisher.publishEvent(new UserWelcomeEvent(user.getId()));
     }
 
     // Đăng nhập và trả về JWT token
@@ -207,7 +211,9 @@ public class AuthServiceImpl implements AuthService {
                             .provider(AuthProvider.GOOGLE)
                             .enabled(true)
                             .build();
-                    return userRepository.save(newUser);
+                    User created = userRepository.save(newUser);
+                    eventPublisher.publishEvent(new UserWelcomeEvent(created.getId()));
+                    return created;
                 });
 
         // Kiểm tra provider trước khi cho login Google

@@ -6,10 +6,7 @@ import com.example.clinic.dto.request.AppointmentRequest;
 import com.example.clinic.dto.response.AppointmentResponse;
 import com.example.clinic.dto.response.PageResponse;
 import com.example.clinic.entity.*;
-import com.example.clinic.entity.enums.AuthProvider;
-import com.example.clinic.entity.enums.Role;
-import com.example.clinic.entity.enums.ShiftType;
-import com.example.clinic.entity.enums.SlotStatus;
+import com.example.clinic.entity.enums.*;
 import com.example.clinic.payment.gateway.VnPayApiClient;
 import com.example.clinic.repository.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -181,5 +178,44 @@ public class AppointmentMyListIntegrationTest extends BaseIntegrationTest {
         // Chính A đặt thêm 09:30-10:00, liền kề lịch 09:00-09:30 của chính A → bị chặn
         assertThatThrownBy(() -> bookAs(patientUser, patient, slots.get(3)))
                 .isInstanceOf(com.example.clinic.booking.engine.BookingRuleViolationException.class);
+    }
+
+    @Test
+    void doctor_me_filtersByDate_andStatus() {
+        LocalDate dayAfter = tomorrow.plusDays(1);
+        doctorScheduleService.createFromApprovedRegistration(
+                doctor.getId(), dayAfter, LocalTime.of(8, 0), LocalTime.of(10, 0), ShiftType.MORNING);
+        List<TimeSlot> laterSlots = timeSlotRepository.findByDoctorIdAndSlotDateAndStatusOrderByStartTimeAsc(
+                doctor.getId(), dayAfter, SlotStatus.AVAILABLE);
+
+        bookAs(patientUser, patient, slots.get(0));         // ngày mai
+        bookAs(patientUser2, patient2, laterSlots.get(0));  // ngày kia
+
+        TestSecurityHelper.loginAs(doctorUser);
+        assertThat(appointmentService.getMyAppointments(0, 10, null, null).getTotalElements()).isEqualTo(2);
+
+        PageResponse<AppointmentResponse> onlyTomorrow = appointmentService.getMyAppointments(0, 10, tomorrow, null);
+        assertThat(onlyTomorrow.getTotalElements()).isEqualTo(1);
+        assertThat(onlyTomorrow.getContent().get(0).getAppointmentDate()).isEqualTo(tomorrow);
+
+        assertThat(appointmentService.getMyAppointments(0, 10, null, AppointmentStatus.PENDING)
+                .getTotalElements()).isEqualTo(2);
+        assertThat(appointmentService.getMyAppointments(0, 10, null, AppointmentStatus.CONFIRMED)
+                .getTotalElements()).isZero();
+    }
+
+    @Test
+    void patient_me_filtersByDate_andStatus() {
+        bookAs(patientUser, patient, slots.get(0));
+
+        TestSecurityHelper.loginAs(patientUser);
+        assertThat(appointmentService.getMyAppointments(0, 10, null, AppointmentStatus.PENDING)
+                .getTotalElements()).isEqualTo(1);
+        assertThat(appointmentService.getMyAppointments(0, 10, null, AppointmentStatus.CANCELLED)
+                .getTotalElements()).isZero();
+        assertThat(appointmentService.getMyAppointments(0, 10, tomorrow, null)
+                .getTotalElements()).isEqualTo(1);
+        assertThat(appointmentService.getMyAppointments(0, 10, tomorrow.plusDays(5), null)
+                .getTotalElements()).isZero();
     }
 }

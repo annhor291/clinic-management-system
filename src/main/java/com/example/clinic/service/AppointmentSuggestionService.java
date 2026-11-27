@@ -6,6 +6,7 @@ import java.util.List;
 
 public interface AppointmentSuggestionService {
 
-    // Gợi ý các slot thay thế cho 1 lịch hẹn đã CANCELLED hoặc EXPIRED
+    // Gợi ý slot thay thế cho lịch bị PHÒNG KHÁM hủy (cancelledByClinic);
+    // các trường hợp khác ném IllegalStateException
     List<SuggestedSlotResponse> suggestAlternatives(Long cancelledAppointmentId);
 }

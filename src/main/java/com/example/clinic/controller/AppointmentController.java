@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -178,14 +179,17 @@ public class AppointmentController {
         return ResponseEntity.ok(ApiResponse.success("Gợi ý lịch khám thay thế", result));
     }
 
-    // GET /api/v1/appointments/me?page=0&size=10
-    // Lịch hẹn của tôi: bệnh nhân xem lịch khám, bác sĩ xem lịch làm việc
+    // GET /api/v1/appointments/me?page=0&size=10&date=2026-12-01&status=CONFIRMED
+    // Lịch hẹn của tôi: bệnh nhân xem lịch khám, bác sĩ xem lịch làm việc; date và status là tùy chọn
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<Object>> getMine(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) AppointmentStatus status) {
 
-        PageResponse<AppointmentResponse> result = appointmentService.getMyAppointments(page, size);
+        PageResponse<AppointmentResponse> result =
+                appointmentService.getMyAppointments(page, size, date, status);
         return ResponseEntity.ok(ApiResponse.success("Lấy lịch hẹn của tôi thành công", view(result)));
     }
 }
